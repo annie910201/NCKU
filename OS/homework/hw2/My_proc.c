@@ -4,7 +4,7 @@
 #include <linux/uaccess.h>
 #include <linux/version.h>
 #include <linux/sched.h>
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,10,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,10,0)//不同kernel 有不同東西
 #include <linux/minmax.h>
 #endif
 
@@ -21,23 +21,18 @@ static unsigned long proc_buffer_size = 0;
 
 static ssize_t procfs_read(struct file *fp, char __user *buffer, size_t len, loff_t *offset){
     if(*offset || proc_buffer_size ==0){//nothing to read
-        // pr_debug("procfs_read: END\n");
         *offset = 0;
         return 0;
     }
-    // proc_buffer_size = min(proc_buffer_size,len);
+
     if(copy_to_user(buffer,proc_buffer,proc_buffer_size))
         return -EFAULT;
     *offset += proc_buffer_size;
 
-    // pr_debug("proc_read: read %lu bytes\n", proc_buffer_size);
     return proc_buffer_size;
 }
 static ssize_t procfs_write(struct file *fp, const char __user *buffer, size_t len, loff_t *offset)
 {
-    
-    // proc_buffer_size = min(PROC_MAX_SIZE,len);
-
     /* take data from user mode, and put it in tmp array */
     char tmp[3000];
     if(copy_from_user(tmp,buffer,len))
@@ -46,12 +41,12 @@ static ssize_t procfs_write(struct file *fp, const char __user *buffer, size_t l
     /* create task_truct to get the data of pid. utime. nvcsw. nivcsw */
     struct task_struct *task = get_current();
     int message =0;
+    //proc_buffer+proc_buffer_size -> data write position 
     message = sprintf(proc_buffer+proc_buffer_size, "\tThreadID: %d Time: %lld(ms) context switch times: %d\n",task->pid, task->utime/100000, (int)(task->nvcsw + task->nivcsw));
     proc_buffer_size += message;
     *offset += proc_buffer_size;
 
     return proc_buffer_size;
-    
 }
 static int procfs_open(struct inode *inode, struct file *fp){
     
@@ -86,10 +81,8 @@ static int __init procfs3_init(void){
         remove_proc_entry(PROCFS_ENTRY_FILENAME, NULL);
         return -ENOMEM;
     }
-    
-    
     proc_set_size(proc_file, 80);
-    proc_set_user(proc_file, GLOBAL_ROOT_UID, GLOBAL_ROOT_GID);
+    proc_set_user(proc_file, GLOBAL_ROOT_UID, GLOBAL_ROOT_GID); //give the user ID and group ID
     return 0;
 }
 
@@ -100,5 +93,4 @@ static void __exit procfs3_exit(void){
 module_init(procfs3_init);
 module_exit(procfs3_exit);
 
-MODULE_LICENSE("GPL");
-
+MODULE_LICENSE("GPL");//宣告程式module
