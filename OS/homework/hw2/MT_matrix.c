@@ -26,10 +26,9 @@ typedef struct my_data{
 
 void *thread_operation(void *vargp){
     my_data *data = (my_data*)vargp;
-    int rank = data->thread_rank;// 0~127
-    int block_size = data->block_size;// 4096/32=128
+    int rank = data->thread_rank;
+    int block_size = data->block_size;
     int col = data->col;
-    // printf("m: %d\n",m);
     for(int i = 0;i<block_size && block_size * rank+i<m ;i++){
         for(int j=0;j<col;j++){
             for(int k=0;k<n;k++){
@@ -44,8 +43,6 @@ void *thread_operation(void *vargp){
     fprintf(fp,"%d\n",tid);
     fclose(fp);
     pthread_mutex_unlock(&mutex);//unlock
-    
-
     pthread_exit(NULL);
 }
 
@@ -124,31 +121,26 @@ int main(int argc, char *argv[]) {      //input format: ./MY_proc.c thread_numbe
     }
 
     /* create thread */
-    
     pthread_t thread_id[thread_number];
     my_data data[thread_number];
 
+    /*get time*/
     clock_gettime(CLOCK_MONOTONIC, &t1);
+    /*doing thread*/
     for(int j=0;j<thread_number;j++){
             data[j].thread_rank = j;
             data[j].block_size = every_thread_capacity;
             data[j].col = k;
-            // printf("%d %d %d %d\n",j,every_thread_capacity,thread_number,n);
             pthread_create(&thread_id[j], NULL, thread_operation,(void*)&data[j]);
-            // FILE *fp = fopen("/proc/thread_info","w+");
-            // fprintf(fp,"%d",getpid());
-            // fclose(fp);
     }
     for(int i=0;i<thread_number;i++){
         pthread_join(thread_id[i],NULL);
     }
+    /*count time interval*/
     clock_gettime(CLOCK_MONOTONIC, &t2);
     interval = 1000000* (t2.tv_sec - t1.tv_sec) + (t2.tv_nsec - t1.tv_nsec)/1000;
-
     printf("Time: %lds\n",interval/1000000);
-    // printf("Time: %ldms\n",interval/1000); //for testcase 3 and 4
 
-    // printf("test\n");
     /* write m3 to result.txt */
     FILE *fp = fopen("result.txt","w");
     fprintf(fp, "%d %d\n", m,k);
@@ -158,8 +150,7 @@ int main(int argc, char *argv[]) {      //input format: ./MY_proc.c thread_numbe
         }
         fprintf(fp,"\n");
     }
-    // printf("test\n");
-
+    
     /* print pid */
     printf("PID: %d\n",getpid());
 
