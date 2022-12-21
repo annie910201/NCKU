@@ -9,7 +9,6 @@
 
 void test_exit()
 {
-    // setcontext(&test);
     task_exit();
     while (1);
 }

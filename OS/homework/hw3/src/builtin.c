@@ -6,36 +6,20 @@
 #include <sys/types.h>
 #include <dirent.h>
 #include <fcntl.h>
+#include <signal.h>
+#include <time.h>
+#include <sys/time.h>
 #include <ucontext.h>
 #include "../include/builtin.h"
 #include "../include/command.h"
 #include "../include/function.h"
 #include "../include/task.h"
-# define STACK_SIZE 1024
-
+#include "../include/shell.h"
+# define STACK_SIZE 65536
 const char *task_str[] = {"task1", "task2", "task3", "task4", "task5", "task6", "task7", "task8", "task9", "test_exit", "test_sleep", "test_resource1", "test_resource2", "idle" };
 const void (*task_func[])(void)={&task1, &task2, &task3, &task4, &task5, &task6, &task7, &task8, &task9, &test_exit, &test_sleep, &test_resource1, &test_resource2, &idle };
-ucontext_t current_task;
-char *state[] = {"READY", "RUNNING", "TERMINATED", "WAITING"};
-struct Task
-{
-	ucontext_t new_task;
-	char* task_name;
-	char* fun_name;
-	char* state;
-	int priority;
-	int waiting_time;
-	int tid;
-	int runnung_time;
-	struct Task *next;
-	int resource_num;
-	int *resource;
-	int turnaround_time;
-};
-struct Schedule{
-	struct Task *task;
-	struct Schedule *next;
-};
+void timer();
+void signal_handler();
 int help(char **args)
 {
 	int i;
@@ -188,79 +172,126 @@ int mypid(char **args)
 
 int add(char **args)//add {task name} {function name} {priority}
 {
-	struct Task task;
-	task.fun_name = args[2];
-	task.task_name = args[1];
-	task.state =state[0];
-	task.priority = atoi(args[3]);
-	task.waiting_time=0;
-	task.runnung_time=0;
-	task.next = NULL;
-	
-	getcontext(&current_task);
-	current_task.uc_link = NULL;
-	current_task.uc_stack.ss_sp = malloc(STACK_SIZE);
-	current_task.uc_stack.ss_size = STACK_SIZE;
-	current_task.uc_flags = 0;
-	
-	task.new_task = current_task;
+	int pri = atoi(args[3]);
+	char* function_name = args[2];
+	char* task_name = args[1];
+	task_create(function_name,task_name,pri);
 
-	for(int i=0;i<14;i++){
-		if(strcmp(task.fun_name, task_str[i])==0){
-			makecontext(&task.new_task, task_func[i], 0);
-		}
-	}
-	printf("Task %s is ready.\n", task.task_name);
-	// setcontext(&task.new_task);
+	printf("Task %s is ready.\n", args[1]);
 	return 1;
 }
 
 int del(char **args)//del {task name}
 {
-	struct Task* tmp;
-	getcontext(&current_task);
-	tmp->new_task = current_task;  
-	while(1){
-		if(strcmp(tmp->task_name,args[1])==0){
-			tmp->state = state[2];//terminated
-			break;
-		}
-		else{
-			tmp= tmp->next;
-		}
-	}
-	printf("Task %s is killed.\n", tmp->task_name);
+	char *task_name = args[1];
+	// struct Task* tmp = head;
+	// while(tmp != NULL){
+	// 	if(strcmp(task_name, tmp->task_name)==0){
+	// 		tmp->state = four_state[2];//terminated
+	// 		break;
+	// 	}
+	// 	tmp = tmp->next;
+	// }
+	task_delete(task_name);
+	printf("Task %s is killed.\n", task_name);
 	// free(tmp);
 	return 1;
 }
 
-int ps(char **args)
+int ps(char **args)//ps //show inforamtion
 {
-	// struct Task* tmp;
-	// while(1){
-	// 	if(tmp->next==NULL){
-	// 		break;
-	// 	}
-	// 	else{
-	// 		tmp= tmp ->next;
-	// 		if(strcmp(tmp->state, "TERMINATED")==0){//state == terminated
-	// 			printf("%3d|%10s|%10s|%8d|%8d|%10s|%10s|%8d", getpid(), tmp->task_name, tmp->state, , , , ,tmp->priority);
-	// 		}
-	// 		else{
-	// 			printf("%3d|%10s|%10s|%8d|%8d|%10s|%10s|%8d", getpid(), tmp->task_name, tmp->state, , , "none", ,tmp->priority);
-	// 		}
-			
-	// 	}
-	// }
+	//print title
+	printf(" TID|       name|      state| running| waiting| turnaround| resources| priority\n");
+	printf("-------------------------------------------------------------------------------\n");
+	//print information
+	Task  *tmp = head;
+	char resource[10];
+	while(tmp!=NULL){
+		memset(resource, '\0', 10);
+		char *turnaround = "none";
+		if(tmp->resource_num ==0)
+			strcat(resource, "none");
+		else{
+			for(int i=0;i<tmp->resource_num;i++){
+				char s[3];
+				sprintf(s," %d", tmp->resource[i]);//int to string
+				strcat(resource, s);
+			}
+		}
+		if(strcmp(tmp->state, "TERMINATED")==0){
+			int total_time = tmp->waiting_time + tmp->runnung_time;
+			if(tmp->waiting_time<0)total_time++;
+			char num[10];
+			memset(num,'\0',10);
+			sprintf(num,"%d",total_time);
+			turnaround = num;
+			break;
+		}
+		int pos_wait_time=0;
+		if(tmp->waiting_time >0)
+		 	pos_wait_time= tmp->waiting_time;
+		printf("%4d|%11s|%11s|%8d|%8d|%11s|%10s|%9d\n", tmp->tid, tmp->task_name, tmp->state, tmp->runnung_time, pos_wait_time, turnaround, resource, tmp->priority);
+		if(tmp->next == NULL)
+			break;
+		else
+			tmp = tmp->next;
+	}
 	return 1;
 }
 
-int start(char **args)
+int start(char **args)//Start simulation
 {
-	// printf("Start simulation\n");
-	// getcontext(&current_task);
-	// setcontext(&current_task);
+	Schedule *s = s_head;
+	while(s!=NULL){
+		if(strcmp(s->task->state, "READY")==0){
+			break;
+		}
+		else
+			if(s->next==NULL)
+				break;
+			s = s->next;
+	}
+	//after while, s only two possible: READY state or tail(may be TERMINATED)
+	if(s!=s_tail || strcmp(s->task->state,"TERMINATED")!=0){
+		printf("Task %s is running.", s->task->task_name);
+		running = s;
+		running->task->state = "RUNNING";
+		timer();
+		swapcontext(&initial_context, &running->task->new_task);
+	}
 	return 1;
+}
+void signal_handler(){
+	if(alg == 1 && strcmp(running->task->state, "RUNNING")){
+		count_RR_timer ++;
+		if(count_RR_timer == 3){
+			count_RR_timer =0;
+		}
+		else{
+			running->task->runnung_time++;
+			task_check();
+			return;
+		}
+	}
+	if(strcmp(running->task->state,"RUNNING")==0){
+		running ->task->runnung_time++;
+		running->task->state = "READY";
+	}
+	if(strcmp(running->task->state, "READY")!=0){//waiting
+		count_RR_timer = 0;
+		setcontext(&switch_context);
+	}
+	else	
+		swapcontext(&running->task->new_task, &switch_context);
+}
+void timer(){
+	signal(SIGVTALRM, signal_handler);
+	struct itimerval it;
+	it.it_interval.tv_sec = 0;
+	it.it_interval.tv_usec = 10000;//10ms
+	it.it_value.tv_sec =0 ;
+	it.it_value.tv_usec =100000;//10ms
+	setitimer(ITIMER_VIRTUAL, &it, NULL);
 }
 
 const char *builtin_str[] = {
