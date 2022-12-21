@@ -184,53 +184,57 @@ int add(char **args)//add {task name} {function name} {priority}
 int del(char **args)//del {task name}
 {
 	char *task_name = args[1];
-	// struct Task* tmp = head;
-	// while(tmp != NULL){
-	// 	if(strcmp(task_name, tmp->task_name)==0){
-	// 		tmp->state = four_state[2];//terminated
-	// 		break;
-	// 	}
-	// 	tmp = tmp->next;
-	// }
 	task_delete(task_name);
 	printf("Task %s is killed.\n", task_name);
-	// free(tmp);
 	return 1;
 }
 
 int ps(char **args)//ps //show inforamtion
 {
+	//variable
+	char *resource;//get resource from resource.c and print it
 	//print title
 	printf(" TID|       name|      state| running| waiting| turnaround| resources| priority\n");
 	printf("-------------------------------------------------------------------------------\n");
-	//print information
+	//use tmp pointer to point to the node want to print
 	Task  *tmp = head;
-	char resource[10];
 	while(tmp!=NULL){
-		memset(resource, '\0', 10);
-		char *turnaround = "none";
-		if(tmp->resource_num ==0)
+
+		/*deal resource*/
+		memset(resource, '\0', 10);//initialize
+		if(tmp->resource_num ==0)	//no resource
 			strcat(resource, "none");
-		else{
+		else						//have resource
+		{
 			for(int i=0;i<tmp->resource_num;i++){
-				char s[3];
-				sprintf(s," %d", tmp->resource[i]);//int to string
+				char *s;
+				sprintf(s," %d", tmp->resource[i]);//int to string //sprintf(string,tostring, int)
 				strcat(resource, s);
 			}
 		}
-		if(strcmp(tmp->state, "TERMINATED")==0){
+
+		/* deal waiting time */
+		int pos_wait_time=0;//time need to be positive
+		if(tmp->waiting_time >= 0)
+		 	pos_wait_time= tmp->waiting_time;
+
+		/*deal turnaround*/
+		char *turnaround = "none";//turnaround = total time = waiting time + running time, 
+		if(strcmp(tmp->state, "TERMINATED")==0){//if state = TERMINATED, have turnaround
 			int total_time = tmp->waiting_time + tmp->runnung_time;
-			if(tmp->waiting_time<0)total_time++;
-			char num[10];
-			memset(num,'\0',10);
-			sprintf(num,"%d",total_time);
-			turnaround = num;
+			if(tmp->waiting_time<0)//initial is -1 //represent context don't have to wait
+				total_time++;// offset the -1
+			char *char_time;
+			// itoa(total_time, char_time, 10);//int to string //itoa(int, string, radix)
+			sprintf(char_time, "%d" , total_time);
+			turnaround = char_time;
 			break;
 		}
-		int pos_wait_time=0;
-		if(tmp->waiting_time >0)
-		 	pos_wait_time= tmp->waiting_time;
+
+		/* print */
 		printf("%4d|%11s|%11s|%8d|%8d|%11s|%10s|%9d\n", tmp->tid, tmp->task_name, tmp->state, tmp->runnung_time, pos_wait_time, turnaround, resource, tmp->priority);
+		
+		/* moving pointer */
 		if(tmp->next == NULL)
 			break;
 		else
@@ -242,46 +246,54 @@ int ps(char **args)//ps //show inforamtion
 int start(char **args)//Start simulation
 {
 	Schedule *s = s_head;
-	while(s!=NULL){
-		if(strcmp(s->task->state, "READY")==0){
+
+	/* find READY state context */
+	while(s->next!=NULL){
+		if(strcmp(s->task->state, "READY")==0)
 			break;
-		}
-		else
-			if(s->next==NULL)
-				break;
-			s = s->next;
+		
+		// else
+		// 	if(s->next==NULL)
+		// 		break;
+		s = s->next;
 	}
 	//after while, s only two possible: READY state or tail(may be TERMINATED)
-	if(s!=s_tail || strcmp(s->task->state,"TERMINATED")!=0){
+	if(s!=s_tail || strcmp(s->task->state,"TERMINATED")!=0){//avoid s is tail and state is TERMINATED
 		printf("Task %s is running.", s->task->task_name);
 		running = s;
 		running->task->state = "RUNNING";
+		task_create_idle();
 		timer();
-		swapcontext(&initial_context, &running->task->new_task);
+		swapcontext(&initial_context, &running->task->new_task);//change to running context and store current context in initial_context, will change back in the end
 	}
 	return 1;
 }
 void signal_handler(){
+
+	/* if algorithm is RR and running context is in RUNNING state */
 	if(alg == 1 && strcmp(running->task->state, "RUNNING")){
 		count_RR_timer ++;
-		if(count_RR_timer == 3){
+		if(count_RR_timer == 3){ //change every 30ms
 			count_RR_timer =0;
 		}
 		else{
 			running->task->runnung_time++;
-			task_check();
+			task_check();//check other process, and moving them
 			return;
 		}
 	}
+
+	/* if running context is in RUNNING state, change to READY, and choose next context later */
 	if(strcmp(running->task->state,"RUNNING")==0){
 		running ->task->runnung_time++;
-		running->task->state = "READY";
+		running ->task->state = "READY"; 
 	}
-	if(strcmp(running->task->state, "READY")!=0){//waiting
+	
+	if(strcmp(running->task->state, "READY")!=0){//if running context is in WAITING state 
 		count_RR_timer = 0;
 		setcontext(&switch_context);
 	}
-	else	
+	else//if running context is in READY state, save current context to running, and jump to switch_context
 		swapcontext(&running->task->new_task, &switch_context);
 }
 void timer(){
@@ -291,7 +303,11 @@ void timer(){
 	it.it_interval.tv_usec = 10000;//10ms
 	it.it_value.tv_sec =0 ;
 	it.it_value.tv_usec =100000;//10ms
-	setitimer(ITIMER_VIRTUAL, &it, NULL);
+	if(setitimer(ITIMER_VIRTUAL, &it, NULL)!=0){//successful -> 0, not success->-1
+		perror("timer is error");
+	}
+	//ITIMER_VIRTUAL-> only decrement when process runnung
+	//ITIMER_REAL -> decrement always
 }
 
 const char *builtin_str[] = {
