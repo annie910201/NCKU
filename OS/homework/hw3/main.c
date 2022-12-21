@@ -22,7 +22,7 @@ int main(int argc, char *argv[])
 		alg = 1;
 	}
 	count_tid = 1;
-	count_rr=0;
+	count_rr=0;//record the TERMINATED context
 	count_RR_timer = 0;
 	shell();
 
