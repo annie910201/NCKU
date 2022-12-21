@@ -13,8 +13,8 @@ struct Task
 	char* fun_name;
 	char* state;
 	int priority;
-    int wait_to_runnung;
-	int waiting_time;
+    int wait_to_runnung;// WAITING can devide to two condition: sleep(no resource) / wait other process, if wait_to_running == 0 => sleep 
+	int waiting_time;//waiting time after start simulation//程式運行時目前的waiting time
 	int tid;
 	int runnung_time;
 	struct Task *next;
@@ -26,7 +26,7 @@ struct Task
 struct Schedule{
 	struct Task *task;
 	struct Schedule *next;
-    int wait_time;
+    int wait_time;//the resource total need to wait time//task_sleep 完後給予的總wait time, 當wait time == waiting time代表等待結束, 進入READY
     int count_after_schedule;
 };
 Task *head;//point to head
