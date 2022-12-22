@@ -3,15 +3,23 @@
 #include <ucontext.h>
 
 //struct
+typedef enum State State;
 typedef struct Task Task;
 typedef struct Schedule Schedule;
-typedef void (*task_fun)();
+typedef void (*task_fun)(void);
+enum State{
+	READY,
+	RUNNING,
+	WAITING,
+	TERMINATED,
+};	
 struct Task
 {
 	ucontext_t new_task;
 	char task_name[20];
 	char fun_name[20];
-	char state[20];
+	// char state[20];
+	State state;
 	int priority;
     int wait_to_runnung;// WAITING can devide to two condition: sleep(no resource) / wait other process, if wait_to_running == 0 => sleep 
 	int waiting_time;//waiting time after start simulation//程式運行時目前的waiting time
