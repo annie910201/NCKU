@@ -193,7 +193,8 @@ int del(char **args)//del {task name}
 	Task *tmp = head;
 	while(tmp!=NULL){
 		if(strcmp(tmp->task_name, task_name)==0){
-			strcpy(tmp->state, "TERMINATED");
+			// strcpy(tmp->state, "TERMINATED");
+			tmp->state=TERMINATED;
 			break;
 		}
 		tmp = tmp->next;
@@ -206,24 +207,23 @@ int del(char **args)//del {task name}
 int ps(char **args)//ps //show inforamtion
 {
 	//variable
-	char resource[10];//get resource from resource.c and print it
+	char print_resource[10];//get resource from resource.c and print it
 	//print title
 	printf(" TID|       name|      state| running| waiting| turnaround| resources| priority\n");
 	printf("-------------------------------------------------------------------------------\n");
 	//use tmp pointer to point to the node want to print
 	Task  *tmp = head;
 	while(tmp!=NULL){
-		// printf("Test\n");
 		/*deal resource*/
-		memset(resource, '\0', 10);//initialize
+		memset(print_resource, '\0', 10);//initialize
 		if(tmp->resource_num ==0)	//no resource
-			strcat(resource, "none");
+			strcat(print_resource, "none");
 		else						//have resource
 		{
 			for(int i=0;i<tmp->resource_num;i++){
 				char s[3];
 				sprintf(s," %d", tmp->resource[i]);//int to string //sprintf(string,tostring, int)
-				strcat(resource, s);
+				strcat(print_resource, s);
 			}
 		}
 
@@ -234,7 +234,7 @@ int ps(char **args)//ps //show inforamtion
 
 		/*deal turnaround*/
 		char *turnaround = "none";//turnaround = total time = waiting time + running time, 
-		if(strcmp(tmp->state, "TERMINATED")==0){//if state = TERMINATED, have turnaround
+		if(tmp->state==TERMINATED){//if state = TERMINATED, have turnaround
 			int total_time = tmp->waiting_time + tmp->runnung_time;
 			if(tmp->waiting_time<0)//initial is -1 //represent context don't have to wait
 				total_time++;// offset the -1
@@ -245,8 +245,19 @@ int ps(char **args)//ps //show inforamtion
 			// break;
 		}
 
+		/* deal state string */
+		char* state_char;
+		if(tmp->state== WAITING)
+			state_char = "WAITING";
+		else if(tmp->state== READY)
+			state_char = "READY";
+		else if(tmp->state== TERMINATED)
+			state_char = "TERMINATED";
+		else if(tmp->state== RUNNING)
+			state_char = "RUNNING";
+
 		/* print */
-		printf("%4d|%11s|%11s|%8d|%8d|%11s|%10s|%9d\n", tmp->tid, tmp->task_name, tmp->state, tmp->runnung_time, pos_wait_time, turnaround, resource, tmp->priority);
+		printf("%4d|%11s|%11s|%8d|%8d|%11s|%10s|%9d\n", tmp->tid, tmp->task_name, state_char, tmp->runnung_time, pos_wait_time, turnaround, print_resource, tmp->priority);
 		
 		/* moving pointer */
 		if(tmp->next == NULL)
@@ -263,7 +274,7 @@ int start(char **args)//Start simulation
 
 	/* find READY state context */
 	while(s!=NULL){
-		if(strcmp(s->task->state, "READY")==0)
+		if(s->task->state==READY)
 			break;
 		else{
 			if(s->next!=NULL)
@@ -273,10 +284,11 @@ int start(char **args)//Start simulation
 		}
 	}
 	//after while, s only two possible: READY state or tail(may be TERMINATED)
-	if(s!=s_tail || strcmp(s->task->state,"TERMINATED")!=0){//avoid s is tail and state is TERMINATED
+	if(s!=s_tail || s->task->state!=TERMINATED){//avoid s is tail and state is TERMINATED
 		printf("Task %s is running.\n", s->task->task_name);
 		running = s;
-		strcpy(running->task->state , "RUNNING");
+		// strcpy(running->task->state , "RUNNING");
+		running->task->state=RUNNING;
 		task_create_idle();
 		timer();
 		swapcontext(&initial_context, &running->task->new_task);//change to running context and store current context in initial_context, will change back in the end
@@ -287,8 +299,9 @@ int start(char **args)//Start simulation
 void signal_handler(){
 
 	/* if algorithm is RR and running context is in RUNNING state */
-	if(alg == 1 && strcmp(running->task->state, "RUNNING")){
+	if(alg == 1 && running->task->state==RUNNING){
 		count_RR_timer ++;
+		// printf("%d\n", count_RR_timer);
 		if(count_RR_timer == 3){ //change every 30ms
 			count_RR_timer =0;
 		}
@@ -300,12 +313,14 @@ void signal_handler(){
 	}
 
 	/* if running context is in RUNNING state, change to READY, and choose next context later */
-	if(strcmp(running->task->state,"RUNNING")==0){
-		running ->task->runnung_time++;
-		strcpy(running ->task->state , "READY"); 
+	if(running->task->state==RUNNING){
+		// printf("Go to ready queue\n");
+		running->task->runnung_time++;
+		// strcpy(running->task->state , "READY"); 
+		running->task->state=READY;
 	}
 	
-	if(strcmp(running->task->state, "READY")!=0){//if running context is in WAITING state 
+	if(running->task->state!=READY){//if running context is in WAITING state 
 		count_RR_timer = 0;
 		setcontext(&switch_context);
 	}
@@ -315,18 +330,17 @@ void signal_handler(){
 void ctrl_z(){
 	// stop = 1;
 	setcontext(&initial_context);
-	printf("pause");
 }
 void timer(){
 	signal(SIGVTALRM, signal_handler);
 	signal(SIGTSTP,ctrl_z);
 	signal(SIGCONT, ctrl_z);
-	struct itimerval it;
-	it.it_interval.tv_sec = 0;
-	it.it_interval.tv_usec = 10000;//10ms
-	it.it_value.tv_sec =0 ;
-	it.it_value.tv_usec =100000;//10ms
-	if(setitimer(ITIMER_VIRTUAL, &it, NULL)!=0){//successful -> 0, not success->-1
+	struct itimerval it1,it2;
+	it1.it_interval.tv_sec = 0;
+	it1.it_interval.tv_usec = 10000;//10ms
+	it1.it_value.tv_sec =0 ;
+	it1.it_value.tv_usec =100000;//10ms
+	if(setitimer(ITIMER_VIRTUAL, &it1, &it2)!=0){//successful -> 0, not success->-1
 		perror("timer is error");
 	}
 	//ITIMER_VIRTUAL-> only decrement when process running
