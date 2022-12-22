@@ -20,11 +20,9 @@ void task_create(char* fun_name, char* task_name, int priority);
 
 void task_create(char* fun_name, char* task_name, int priority){
     Task *task = (Task*)calloc(1,sizeof(Task));
-    // printf("tat");
 	strcpy(task->fun_name, fun_name);
-    //task->fun_name = fun_name;    //task->fun_name and fun_name will point to same address
+    // task->fun_name = fun_name;    //task->fun_name and fun_name will point to same address
 	strcpy(task->task_name, task_name);
-	// strcpy(task->state, "READY");
     task->state = READY;
 	task->priority = priority;
 	task->waiting_time=-1;
@@ -99,7 +97,6 @@ void task_delete(char* task_name){
     count_rr++;//add terminated context number
     Schedule *tmp = s_head;
     if(strcmp(tmp->task->task_name , task_name)==0){
-        // strcpy(tmp->task->state,"TERMINATED");//terminated
         tmp->task->state = TERMINATED;
         s_head = s_head->next;
         free(tmp);
@@ -127,7 +124,6 @@ void task_check(){
             s->task->waiting_time++;
             if(s->task->wait_to_runnung==0){ //sleep
                 if(s->task->waiting_time==s->wait_time)//sleep time is over => go to READY state
-                    // strcpy(s->task->state , "READY");
                     s->task->state = READY;
             }
             else{//wait to other process => if resource can get, moving to READY state
@@ -140,11 +136,8 @@ void task_check(){
                     }
                 }
                 if(res_ava == 0)//can get resource
-                {
-                    // strcpy(s->task->state ,"READY");
                     s->task->state = READY;
-                    // printf("%s\n",s->task->state);
-                }
+                
             }
             
         }
@@ -195,9 +188,7 @@ void task_choose(){
                     printf("Task %s is running.\n", s->task->task_name);
 
                 running = s;
-                // strcpy(running->task->state, "RUNNING");
                 running->task->state = RUNNING;
-                printf("%s", running->task->state);
                 setcontext(&running->task->new_task);
             }
         }
@@ -224,7 +215,6 @@ void task_choose(){
 
         /* if there still have context need to do but they all in WAITING　state => idle */
         if(s==s_tail && s->task->state!=READY && count_waiting_context !=0){
-            // printf("%s\n",running->task->state);
             printf("CPU idle\n");
             setcontext(&idle_context);
         }
@@ -239,7 +229,6 @@ void task_choose(){
             if(s!=running)
                 printf("Task %s is running.\n", s->task->task_name);
             running = s;
-            // strcpy(running->task->state , "RUNNING");
             running->task->state=RUNNING;
             setcontext(&running->task->new_task);
         }
@@ -264,22 +253,18 @@ void task_create_idle(){
 
 void task_sleep(int ms)
 {
-    // strcpy(running ->task->state , "WAITING");
     running->task->state=WAITING;
     running ->task->runnung_time++;
     running ->wait_time+=ms;
     printf("Task %s goes to sleep.\n", running->task->task_name);
     swapcontext(&running->task->new_task, &idle_context);//change to idle
-    // printf("back\n");
 }
 
 void task_exit()
 {
     count_rr++;//terminated context is added 1
-    // strcpy(running->task->state , "TERMINATED");
     running->task->state=TERMINATED;
     running->task->runnung_time++;
     printf("Task %s has terminated.\n", running->task->task_name);
-    // printf("%s\n",running->task->state);
     swapcontext(&running->task->new_task, &idle_context);//change to idle context
 }

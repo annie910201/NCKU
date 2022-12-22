@@ -179,7 +179,6 @@ int add(char **args)//add {task name} {function name} {priority}
 	int pri = atoi(args[3]);
 	char* function_name = args[2];
 	char* task_name = args[1];
-	// printf("This is bad!");
 	task_create(function_name,task_name,pri);
 	// fflush(stdout);
 	printf("Task %s is ready.\n", args[1]);
@@ -193,7 +192,6 @@ int del(char **args)//del {task name}
 	Task *tmp = head;
 	while(tmp!=NULL){
 		if(strcmp(tmp->task_name, task_name)==0){
-			// strcpy(tmp->state, "TERMINATED");
 			tmp->state=TERMINATED;
 			break;
 		}
@@ -287,7 +285,6 @@ int start(char **args)//Start simulation
 	if(s!=s_tail || s->task->state!=TERMINATED){//avoid s is tail and state is TERMINATED
 		printf("Task %s is running.\n", s->task->task_name);
 		running = s;
-		// strcpy(running->task->state , "RUNNING");
 		running->task->state=RUNNING;
 		task_create_idle();
 		timer();
@@ -301,7 +298,6 @@ void signal_handler(){
 	/* if algorithm is RR and running context is in RUNNING state */
 	if(alg == 1 && running->task->state==RUNNING){
 		count_RR_timer ++;
-		// printf("%d\n", count_RR_timer);
 		if(count_RR_timer == 3){ //change every 30ms
 			count_RR_timer =0;
 		}
@@ -314,9 +310,7 @@ void signal_handler(){
 
 	/* if running context is in RUNNING state, change to READY, and choose next context later */
 	if(running->task->state==RUNNING){
-		// printf("Go to ready queue\n");
 		running->task->runnung_time++;
-		// strcpy(running->task->state , "READY"); 
 		running->task->state=READY;
 	}
 	
