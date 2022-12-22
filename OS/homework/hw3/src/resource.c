@@ -35,6 +35,7 @@ void get_resources(int count, int *resources)
         running->task->runnung_time ++;//when take resource ,it also counted to run time
         running->task->resource_num+=count;
         strcpy(running->task->state , "WAITING");
+        printf("Task %s is waiting resource.\n", running->task->task_name);
         setcontext(&idle_context);
     }
 }

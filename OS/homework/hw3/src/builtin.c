@@ -18,8 +18,11 @@
 # define STACK_SIZE 65536
 const char *task_str[] = {"task1", "task2", "task3", "task4", "task5", "task6", "task7", "task8", "task9", "test_exit", "test_sleep", "test_resource1", "test_resource2", "idle" };
 const void (*task_func[])(void)={&task1, &task2, &task3, &task4, &task5, &task6, &task7, &task8, &task9, &test_exit, &test_sleep, &test_resource1, &test_resource2, &idle };
+
+
 void timer();
 void signal_handler();
+
 int help(char **args)
 {
 	int i;
@@ -178,8 +181,9 @@ int add(char **args)//add {task name} {function name} {priority}
 	char* task_name = args[1];
 	// printf("This is bad!");
 	task_create(function_name,task_name,pri);
-
+	// fflush(stdout);
 	printf("Task %s is ready.\n", args[1]);
+	// fflush(stdout);
 	return 1;
 }
 
@@ -254,6 +258,7 @@ int ps(char **args)//ps //show inforamtion
 
 int start(char **args)//Start simulation
 {
+	// stop = 0;
 	Schedule *s = s_head;
 
 	/* find READY state context */
@@ -276,6 +281,7 @@ int start(char **args)//Start simulation
 		timer();
 		swapcontext(&initial_context, &running->task->new_task);//change to running context and store current context in initial_context, will change back in the end
 	}
+	printf("Simulation over\n");
 	return 1;
 }
 void signal_handler(){
@@ -306,8 +312,15 @@ void signal_handler(){
 	else//if running context is in READY state, save current context to running, and jump to switch_context
 		swapcontext(&running->task->new_task, &switch_context);
 }
+void ctrl_z(){
+	// stop = 1;
+	setcontext(&initial_context);
+	printf("pause");
+}
 void timer(){
 	signal(SIGVTALRM, signal_handler);
+	signal(SIGTSTP,ctrl_z);
+	signal(SIGCONT, ctrl_z);
 	struct itimerval it;
 	it.it_interval.tv_sec = 0;
 	it.it_interval.tv_usec = 10000;//10ms

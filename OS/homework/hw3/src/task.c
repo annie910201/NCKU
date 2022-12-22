@@ -42,7 +42,6 @@ void task_create(char* fun_name, char* task_name, int priority){
     task ->new_task.uc_stack.ss_size = STACK_SIZE;
     task ->new_task.uc_link = NULL;
     makecontext(&task->new_task, task->func, 0);
-
     task ->next = NULL;
 
     if(head==NULL){//set head
@@ -64,6 +63,7 @@ void task_create(char* fun_name, char* task_name, int priority){
     }
     else{
         if(alg==2){//PP need to schedule
+            Schedule *tmp = s_head;
             if(s_tail->task->priority < s->task->priority ){//priority is larger than tail => least significant
                 s_tail->next = s;
                 s_tail = s_tail->next;
@@ -73,7 +73,6 @@ void task_create(char* fun_name, char* task_name, int priority){
                 s_head = s;
             }
             else{//between head and tail
-                Schedule *tmp = s_head;
                 while(tmp->next!=NULL){
                     if(tmp->next->task->priority > s->task->priority){
                         s->next = tmp->next;
@@ -202,9 +201,10 @@ void task_choose(){
         {
             if(strcmp(s->task->state, "READY")==0)
                 break;
-            else if(strcmp(s->task->state, "WAITING")==0)
+            else {
+                if(strcmp(s->task->state, "WAITING")==0)
                     count_waiting_context++;
-
+            }
             if(s->next == NULL) 
                 break;
             s= s->next;
@@ -253,6 +253,7 @@ void task_sleep(int ms)
     strcpy(running ->task->state , "WAITING");
     running ->task->runnung_time++;
     running ->wait_time+=ms;
+    printf("Task %s goes to sleep.\n", running->task->task_name);
     swapcontext(&running->task->new_task, &idle_context);//change to idle
 }
 
