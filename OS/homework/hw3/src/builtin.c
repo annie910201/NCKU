@@ -65,6 +65,7 @@ int echo(char **args)
 
 int exit_shell(char **args)
 {
+	printf("over\n");
 	return 0;
 }
 
@@ -175,6 +176,7 @@ int add(char **args)//add {task name} {function name} {priority}
 	int pri = atoi(args[3]);
 	char* function_name = args[2];
 	char* task_name = args[1];
+	// printf("This is bad!");
 	task_create(function_name,task_name,pri);
 
 	printf("Task %s is ready.\n", args[1]);
@@ -184,6 +186,14 @@ int add(char **args)//add {task name} {function name} {priority}
 int del(char **args)//del {task name}
 {
 	char *task_name = args[1];
+	Task *tmp = head;
+	while(tmp!=NULL){
+		if(strcmp(tmp->task_name, task_name)==0){
+			strcpy(tmp->state, "TERMINATED");
+			break;
+		}
+		tmp = tmp->next;
+	}
 	task_delete(task_name);
 	printf("Task %s is killed.\n", task_name);
 	return 1;
@@ -192,14 +202,14 @@ int del(char **args)//del {task name}
 int ps(char **args)//ps //show inforamtion
 {
 	//variable
-	char *resource;//get resource from resource.c and print it
+	char resource[20];//get resource from resource.c and print it
 	//print title
 	printf(" TID|       name|      state| running| waiting| turnaround| resources| priority\n");
 	printf("-------------------------------------------------------------------------------\n");
 	//use tmp pointer to point to the node want to print
 	Task  *tmp = head;
 	while(tmp!=NULL){
-
+		// printf("Test\n");
 		/*deal resource*/
 		memset(resource, '\0', 10);//initialize
 		if(tmp->resource_num ==0)	//no resource
@@ -207,7 +217,7 @@ int ps(char **args)//ps //show inforamtion
 		else						//have resource
 		{
 			for(int i=0;i<tmp->resource_num;i++){
-				char *s;
+				char s[3];
 				sprintf(s," %d", tmp->resource[i]);//int to string //sprintf(string,tostring, int)
 				strcat(resource, s);
 			}
@@ -224,11 +234,11 @@ int ps(char **args)//ps //show inforamtion
 			int total_time = tmp->waiting_time + tmp->runnung_time;
 			if(tmp->waiting_time<0)//initial is -1 //represent context don't have to wait
 				total_time++;// offset the -1
-			char *char_time;
+			char char_time[10];
 			// itoa(total_time, char_time, 10);//int to string //itoa(int, string, radix)
 			sprintf(char_time, "%d" , total_time);
 			turnaround = char_time;
-			break;
+			// break;
 		}
 
 		/* print */
@@ -237,8 +247,7 @@ int ps(char **args)//ps //show inforamtion
 		/* moving pointer */
 		if(tmp->next == NULL)
 			break;
-		else
-			tmp = tmp->next;
+		tmp = tmp->next;
 	}
 	return 1;
 }
@@ -248,20 +257,21 @@ int start(char **args)//Start simulation
 	Schedule *s = s_head;
 
 	/* find READY state context */
-	while(s->next!=NULL){
+	while(s!=NULL){
 		if(strcmp(s->task->state, "READY")==0)
 			break;
-		
-		// else
-		// 	if(s->next==NULL)
-		// 		break;
-		s = s->next;
+		else{
+			if(s->next!=NULL)
+				s = s->next;
+			else
+				break;	
+		}
 	}
 	//after while, s only two possible: READY state or tail(may be TERMINATED)
 	if(s!=s_tail || strcmp(s->task->state,"TERMINATED")!=0){//avoid s is tail and state is TERMINATED
-		printf("Task %s is running.", s->task->task_name);
+		printf("Task %s is running.\n", s->task->task_name);
 		running = s;
-		running->task->state = "RUNNING";
+		strcpy(running->task->state , "RUNNING");
 		task_create_idle();
 		timer();
 		swapcontext(&initial_context, &running->task->new_task);//change to running context and store current context in initial_context, will change back in the end
@@ -286,7 +296,7 @@ void signal_handler(){
 	/* if running context is in RUNNING state, change to READY, and choose next context later */
 	if(strcmp(running->task->state,"RUNNING")==0){
 		running ->task->runnung_time++;
-		running ->task->state = "READY"; 
+		strcpy(running ->task->state , "READY"); 
 	}
 	
 	if(strcmp(running->task->state, "READY")!=0){//if running context is in WAITING state 
@@ -306,7 +316,7 @@ void timer(){
 	if(setitimer(ITIMER_VIRTUAL, &it, NULL)!=0){//successful -> 0, not success->-1
 		perror("timer is error");
 	}
-	//ITIMER_VIRTUAL-> only decrement when process runnung
+	//ITIMER_VIRTUAL-> only decrement when process running
 	//ITIMER_REAL -> decrement always
 }
 

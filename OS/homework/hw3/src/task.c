@@ -17,10 +17,11 @@
 
 void task_create(char* fun_name, char* task_name, int priority){
     Task *task = (Task*)calloc(1,sizeof(Task));
+    // printf("tat");
 	strcpy(task->fun_name, fun_name);
     //task->fun_name = fun_name;    //task->fun_name and fun_name will point to same address
 	strcpy(task->task_name, task_name);
-	task->state ="READY";
+	strcpy(task->state, "READY");
 	task->priority = priority;
 	task->waiting_time=-1;
     task -> wait_to_runnung = 0;
@@ -31,9 +32,8 @@ void task_create(char* fun_name, char* task_name, int priority){
 	task->next = NULL;
     task->tid = count_tid++;
     for(int i=0;i<14;i++){
-		if(strcmp(task->fun_name, task_str[i])==0){
+		if(strcmp(task->fun_name, task_str[i])==0)
 			task->func = task_func[i];
-		}
 	}
 
     //initialize context
@@ -93,16 +93,16 @@ void task_create(char* fun_name, char* task_name, int priority){
 }
 
 void task_delete(char* task_name){
-    count_rr++;
+    count_rr++;//add terminated context number
     Schedule *tmp = s_head;
     if(strcmp(tmp->task->task_name , task_name)==0){
-        tmp->task->state = "TERMINATED";//terminated
+        strcpy(tmp->task->state,"TERMINATED");//terminated
         s_head = s_head->next;
+        free(tmp);
     }
     else{
         while(tmp->next!=NULL){
             if(strcmp(tmp->next->task->task_name , task_name)==0){
-                tmp->next->task->state = "TERMINATED";//terminated
                 Schedule *d = tmp->next;
                 tmp->next = d->next;
                 if(d == s_tail)
@@ -123,10 +123,10 @@ void task_check(){
             s->task->waiting_time++;
             if(s->task->wait_to_runnung==0){ //sleep
                 if(s->task->waiting_time==s->wait_time)//sleep time is over => go to READY state
-                    s->task->state = "READY";
+                    strcpy(s->task->state , "READY");
             }
             else{//wait to other process => if resource can get, moving to READY state
-                s->wait_time = s->task->waiting_time;// synchronize to wait time if not in sleep
+                s->wait_time ++;// synchronize to wait time if not in sleep
                 int res_ava = 0;//if res_ava = 1 => can't get resource
                 for(int i=s->count_after_schedule; i<s->task->resource_num;i++){
                     if(resource_ava[s->task->resource[i]]){//can't get the resource
@@ -135,7 +135,7 @@ void task_check(){
                     }
                 }
                 if(res_ava == 0)//can get resource
-                    s->task->state = "READY";
+                    strcpy(s->task->state ,"READY");
             }
             
         }
@@ -186,7 +186,7 @@ void task_choose(){
                     printf("Task %s is running.", s->task->task_name);
 
                 running = s;
-                running->task->state="RUNNING";
+                strcpy(running->task->state, "RUNNING");
                 setcontext(&running->task->new_task);
             }
         }
@@ -224,9 +224,9 @@ void task_choose(){
         /* has READY context need to do */
         else{
             if(s!=running)
-                printf("Task %s is running,\n", s->task->task_name);
+                printf("Task %s is running.\n", s->task->task_name);
             running = s;
-            running->task->state = "RUNNING";
+            strcpy(running->task->state , "RUNNING");
             setcontext(&running->task->new_task);
         }
         
@@ -250,7 +250,7 @@ void task_create_idle(){
 
 void task_sleep(int ms)
 {
-    running ->task->state = "WAITING";
+    strcpy(running ->task->state , "WAITING");
     running ->task->runnung_time++;
     running ->wait_time+=ms;
     swapcontext(&running->task->new_task, &idle_context);//change to idle
@@ -259,7 +259,7 @@ void task_sleep(int ms)
 void task_exit()
 {
     count_rr++;//terminated context is added 1
-    running->task->state = "TERMINATED";
+    strcpy(running->task->state , "TERMINATED");
     running->task->runnung_time++;
     printf("Task %s has terminated.\n", running->task->task_name);
     swapcontext(&running->task->new_task, &idle_context);//change to idle context

@@ -34,7 +34,7 @@ void get_resources(int count, int *resources)
         running->task->wait_to_runnung = 1;//not all resource is available
         running->task->runnung_time ++;//when take resource ,it also counted to run time
         running->task->resource_num+=count;
-        running->task->state = "WAITING";
+        strcpy(running->task->state , "WAITING");
         setcontext(&idle_context);
     }
 }

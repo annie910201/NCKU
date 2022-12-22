@@ -68,7 +68,6 @@ void task1()
 
 void task2()
 {
-    printf("here is task2");
     int size = 512;
     int *matrix[size], *result[size];
     for (int i = 0; i < size; ++i) {
