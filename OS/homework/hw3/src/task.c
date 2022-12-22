@@ -146,11 +146,11 @@ void task_check(){
 /* choose next task */
 void task_choose(){
     task_check();
-
+    
     /* RR => find the next ready context*/
     if(alg==1){
         Schedule *s = running;
-        int w= 0;
+        int readyQ_empty= 0;
 
         /* task is over or not */
         if(count_rr!=count_tid){//not doing over
@@ -165,7 +165,7 @@ void task_choose(){
                     break;
                 /* if check a loop and no context can be doing => idle */
                 if(s==running && strcmp(s->task->state,"READY")!=0){ 
-                    w= 1;
+                    readyQ_empty= 1;
                     break;
                 }
 
@@ -175,14 +175,14 @@ void task_choose(){
             }
 
             /* idle or not */
-            if(w==1){
+            if(readyQ_empty==1){
                 printf("CPU idle\n");
                 setcontext(&idle_context);
             }
             else{
                 //if change context, output the string 
                 if(s!=running)
-                    printf("Task %s is running.", s->task->task_name);
+                    printf("Task %s is running.\n", s->task->task_name);
 
                 running = s;
                 strcpy(running->task->state, "RUNNING");

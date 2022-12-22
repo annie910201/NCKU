@@ -68,7 +68,7 @@ int echo(char **args)
 
 int exit_shell(char **args)
 {
-	printf("over\n");
+	// printf("over\n");
 	return 0;
 }
 
@@ -206,7 +206,7 @@ int del(char **args)//del {task name}
 int ps(char **args)//ps //show inforamtion
 {
 	//variable
-	char resource[20];//get resource from resource.c and print it
+	char resource[10];//get resource from resource.c and print it
 	//print title
 	printf(" TID|       name|      state| running| waiting| turnaround| resources| priority\n");
 	printf("-------------------------------------------------------------------------------\n");
@@ -239,7 +239,7 @@ int ps(char **args)//ps //show inforamtion
 			if(tmp->waiting_time<0)//initial is -1 //represent context don't have to wait
 				total_time++;// offset the -1
 			char char_time[10];
-			// itoa(total_time, char_time, 10);//int to string //itoa(int, string, radix)
+			memset(char_time,'\0',10);
 			sprintf(char_time, "%d" , total_time);
 			turnaround = char_time;
 			// break;

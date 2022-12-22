@@ -97,6 +97,7 @@ void shell()
                 close(fd);
             }
 			if (cmd->out_file) {
+				fflush(stdout); // Flush the ">>>$"
                 fd = open(cmd->out_file, O_RDWR | O_CREAT, 0644);
                 dup2(fd, 1);
                 close(fd);
