@@ -9,9 +9,9 @@ typedef void (*task_fun)();
 struct Task
 {
 	ucontext_t new_task;
-	char* task_name;
-	char* fun_name;
-	char* state;
+	char task_name[20];
+	char fun_name[20];
+	char state[20];
 	int priority;
     int wait_to_runnung;// WAITING can devide to two condition: sleep(no resource) / wait other process, if wait_to_running == 0 => sleep 
 	int waiting_time;//waiting time after start simulation//程式運行時目前的waiting time
@@ -39,7 +39,6 @@ Schedule *s_tail;//point to tail
 void task_sleep(int);
 void task_exit();
 void task_create(char* fun_name, char* task_name, int priority);
-void task_create();
 void task_delete();
 void task_create_idle();
 void task_choose();
