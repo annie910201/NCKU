@@ -153,7 +153,22 @@ void task_choose(){
     /* RR => find the next ready context*/
     if(alg==1){
         Schedule *s = running;
+        Schedule *check_empty = s_head;
         int readyQ_empty= 0;
+        int check_empty_count =0;
+        /* check ready queue */
+        while (check_empty!=NULL)
+        {
+            if(check_empty->task->state==READY)
+                break;
+            else {
+                if(check_empty->task->state==WAITING)
+                    check_empty_count++;
+            }
+            if(check_empty->next == NULL) 
+                break;
+            check_empty= check_empty->next;
+        }
 
         /* task is over or not */
         if(count_rr!=count_tid){//not doing over
@@ -179,13 +194,20 @@ void task_choose(){
 
             /* idle or not */
             if(readyQ_empty==1){
+                if(check_empty==s_tail && check_empty->task->state==TERMINATED && check_empty_count==0){
+                    setcontext(&initial_context);
+                }
                 printf("CPU idle\n");
+                fflush(stdout);
                 setcontext(&idle_context);
             }
             else{
                 //if change context, output the string 
-                if(s!=running)
+                if(s!=running){
                     printf("Task %s is running.\n", s->task->task_name);
+                    fflush(stdout);
+                }
+                    
 
                 running = s;
                 running->task->state = RUNNING;
@@ -216,6 +238,7 @@ void task_choose(){
         /* if there still have context need to do but they all in WAITING　state => idle */
         if(s==s_tail && s->task->state!=READY && count_waiting_context !=0){
             printf("CPU idle\n");
+            fflush(stdout);
             setcontext(&idle_context);
         }
 
@@ -226,8 +249,11 @@ void task_choose(){
 
         /* has READY context need to do */
         else{
-            if(s!=running)
+            if(s!=running){
                 printf("Task %s is running.\n", s->task->task_name);
+                fflush(stdout);
+            }
+                
             running = s;
             running->task->state=RUNNING;
             setcontext(&running->task->new_task);
@@ -257,6 +283,7 @@ void task_sleep(int ms)
     running ->task->runnung_time++;
     running ->wait_time+=ms;
     printf("Task %s goes to sleep.\n", running->task->task_name);
+    fflush(stdout);
     swapcontext(&running->task->new_task, &idle_context);//change to idle
 }
 
@@ -266,5 +293,6 @@ void task_exit()
     running->task->state=TERMINATED;
     running->task->runnung_time++;
     printf("Task %s has terminated.\n", running->task->task_name);
+    fflush(stdout);
     swapcontext(&running->task->new_task, &idle_context);//change to idle context
 }

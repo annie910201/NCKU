@@ -105,14 +105,20 @@ void test_cmd_struct(struct cmd *cmd)
 	int pipe_count = 0;
 	while (temp != NULL) {
 		printf("pipe %d: ", pipe_count);
+		fflush(stdout);
 		for (int i = 0; i < temp->length; ++i) {
 			printf("%s ", temp->args[i]);
+			fflush(stdout);
 		}
 		printf("\n");
+		fflush(stdout);
 		temp = temp->next;
 		++pipe_count;
 	}
 	printf(" in: %s\n", cmd->in_file ? cmd->in_file : "none");
+	fflush(stdout);
 	printf("out: %s\n", cmd->out_file ? cmd->out_file : "none");
+	fflush(stdout);
 	printf("background: %s\n", cmd->background ? "true" : "false");
+	fflush(stdout);
 }

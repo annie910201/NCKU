@@ -27,13 +27,19 @@ int help(char **args)
 {
 	int i;
     printf("--------------------------------------------------\n");
+	fflush(stdout);
   	printf("My Little Shell!!\n");
+	fflush(stdout);
 	printf("The following are built in:\n");
+	fflush(stdout);
 	for (i = 0; i < num_builtins(); i++) {
     	printf("%d: %s\n", i, builtin_str[i]);
+		fflush(stdout);
   	}
 	printf("%d: replay\n", i);
+	fflush(stdout);
     printf("--------------------------------------------------\n");
+	fflush(stdout);
 	return 1;
 }
 
@@ -57,11 +63,17 @@ int echo(char **args)
 			continue;
 		}
 		printf("%s", args[i]);
-		if (args[i + 1])
+		if (args[i + 1]){
 			printf(" ");
+			fflush(stdout);
+		}
+			
 	}
-	if (newline)
+	if (newline){
 		printf("\n");
+		fflush(stdout);
+	}
+		
 
 	return 1;
 }
@@ -77,9 +89,13 @@ int record(char **args)
 	if (history_count < MAX_RECORD_NUM) {
 		for (int i = 0; i < history_count; ++i)
 			printf("%2d: %s\n", i + 1, history[i]);
+			fflush(stdout);
 	} else {
-		for (int i = history_count % MAX_RECORD_NUM; i < history_count % MAX_RECORD_NUM + MAX_RECORD_NUM; ++i)
+		for (int i = history_count % MAX_RECORD_NUM; i < history_count % MAX_RECORD_NUM + MAX_RECORD_NUM; ++i){
 			printf("%2d: %s\n", i - history_count % MAX_RECORD_NUM + 1, history[i % MAX_RECORD_NUM]);
+			fflush(stdout);
+		}
+			
 	}
 	return 1;
 }
@@ -103,11 +119,13 @@ int mypid(char **args)
 
 	    pid_t pid = getpid();
 	    printf("%d\n", pid);
+		fflush(stdout);
 	
 	} else if (strcmp(args[1], "-p") == 0) {
 	
 		if (args[2] == NULL) {
       		printf("mypid -p: too few argument\n");
+			fflush(stdout);
       		return 1;
     	}
 
@@ -115,6 +133,7 @@ int mypid(char **args)
     	int fd = open(fname, O_RDONLY);
     	if(fd == -1) {
       		printf("mypid -p: process id not exist\n");
+			fflush(stdout);
      		return 1;
     	}
 
@@ -125,6 +144,7 @@ int mypid(char **args)
     	char *s_ppid = strtok(NULL, " ");
 	    int ppid = strtol(s_ppid, NULL, 10);
     	printf("%d\n", ppid);
+		fflush(stdout);
 	    
 		close(fd);
 
@@ -132,12 +152,14 @@ int mypid(char **args)
 
 		if (args[2] == NULL) {
       		printf("mypid -c: too few argument\n");
+			fflush(stdout);
       		return 1;
     	}
 
     	DIR *dirp;
     	if ((dirp = opendir("/proc/")) == NULL){
       		printf("open directory error!\n");
+			fflush(stdout);
       		return 1;
     	}
 
@@ -150,6 +172,7 @@ int mypid(char **args)
 		        int fd = open(fname, O_RDONLY);
         		if (fd == -1) {
           			printf("mypid -p: process id not exist\n");
+					fflush(stdout);
           			return 1;
         		}
 
@@ -158,8 +181,11 @@ int mypid(char **args)
         		strtok(NULL, " ");
         		strtok(NULL, " ");
 		        char *s_ppid = strtok(NULL, " ");
-		        if(strcmp(s_ppid, args[2]) == 0)
-		            printf("%s\n", direntp->d_name);
+		        if(strcmp(s_ppid, args[2]) == 0){
+					printf("%s\n", direntp->d_name);
+					fflush(stdout);
+				}
+		            
 
         		close(fd);
      		}
@@ -169,6 +195,7 @@ int mypid(char **args)
 	
 	} else {
     	printf("wrong type! Please type again!\n");
+		fflush(stdout);
   	}
 	
 	return 1;
@@ -182,7 +209,7 @@ int add(char **args)//add {task name} {function name} {priority}
 	task_create(function_name,task_name,pri);
 	// fflush(stdout);
 	printf("Task %s is ready.\n", args[1]);
-	// fflush(stdout);
+	fflush(stdout);
 	return 1;
 }
 
@@ -199,6 +226,7 @@ int del(char **args)//del {task name}
 	}
 	task_delete(task_name);
 	printf("Task %s is killed.\n", task_name);
+	fflush(stdout);
 	return 1;
 }
 
@@ -208,7 +236,9 @@ int ps(char **args)//ps //show inforamtion
 	char print_resource[10];//get resource from resource.c and print it
 	//print title
 	printf(" TID|       name|      state| running| waiting| turnaround| resources| priority\n");
+	fflush(stdout);
 	printf("-------------------------------------------------------------------------------\n");
+	fflush(stdout);
 	//use tmp pointer to point to the node want to print
 	Task  *tmp = head;
 	while(tmp!=NULL){
@@ -256,7 +286,7 @@ int ps(char **args)//ps //show inforamtion
 
 		/* print */
 		printf("%4d|%11s|%11s|%8d|%8d|%11s|%10s|%9d\n", tmp->tid, tmp->task_name, state_char, tmp->runnung_time, pos_wait_time, turnaround, print_resource, tmp->priority);
-		
+		fflush(stdout);
 		/* moving pointer */
 		if(tmp->next == NULL)
 			break;
@@ -284,6 +314,7 @@ int start(char **args)//Start simulation
 	//after while, s only two possible: READY state or tail(may be TERMINATED)
 	if(s!=s_tail || s->task->state!=TERMINATED){//avoid s is tail and state is TERMINATED
 		printf("Task %s is running.\n", s->task->task_name);
+		fflush(stdout);
 		running = s;
 		running->task->state=RUNNING;
 		task_create_idle();
@@ -291,6 +322,7 @@ int start(char **args)//Start simulation
 		swapcontext(&initial_context, &running->task->new_task);//change to running context and store current context in initial_context, will change back in the end
 	}
 	printf("Simulation over\n");
+	fflush(stdout);
 	return 1;
 }
 void signal_handler(){
@@ -321,20 +353,21 @@ void signal_handler(){
 	else//if running context is in READY state, save current context to running, and jump to switch_context
 		swapcontext(&running->task->new_task, &switch_context);
 }
-void ctrl_z(){
+/* tranfer between shell mode and simulation mode */
+void mode_convert(){
 	// stop = 1;
 	setcontext(&initial_context);
 }
 void timer(){
 	signal(SIGVTALRM, signal_handler);
-	signal(SIGTSTP,ctrl_z);
-	signal(SIGCONT, ctrl_z);
-	struct itimerval it1,it2;
+	signal(SIGTSTP,mode_convert);//ctrl z
+	signal(SIGCONT, mode_convert);//start
+	struct itimerval it1;
 	it1.it_interval.tv_sec = 0;
 	it1.it_interval.tv_usec = 10000;//10ms
 	it1.it_value.tv_sec =0 ;
 	it1.it_value.tv_usec =100000;//10ms
-	if(setitimer(ITIMER_VIRTUAL, &it1, &it2)!=0){//successful -> 0, not success->-1
+	if(setitimer(ITIMER_VIRTUAL, &it1,NULL)!=0){//successful -> 0, not success->-1
 		perror("timer is error");
 	}
 	//ITIMER_VIRTUAL-> only decrement when process running

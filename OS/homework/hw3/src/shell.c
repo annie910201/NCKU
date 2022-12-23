@@ -49,6 +49,7 @@ int spawn_proc(int in, int out, struct cmd *cmd, struct pipes *p)
    		if(cmd->background) {
 			if (!p->next)
       			printf("[pid]: %d\n", pid);
+				fflush(stdout);
     	} else {
       		do {
           		waitpid(pid, &status, WUNTRACED);
@@ -82,6 +83,7 @@ void shell()
 {
 	while (1) {
 		printf(">>> $ ");
+		fflush(stdout);
 		char *buffer = read_line();
 		if (buffer == NULL)
 			continue;
