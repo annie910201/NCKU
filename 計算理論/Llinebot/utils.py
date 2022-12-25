@@ -12,10 +12,9 @@ def send_text_message(reply_token, text):
     line_bot_api.reply_message(reply_token, TextSendMessage(text=text))
     return "OK"
 
-
 """
 def send_image_url(id, img_url):
-    pass
+    
 
 def send_button_message(id, text, buttons):
     pass

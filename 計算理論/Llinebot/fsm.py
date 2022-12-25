@@ -1,81 +1,177 @@
 from transitions.extensions import GraphMachine
-from selenium import webdriver
-from pyquery import PyQuery as pq #name PyQuery as pq
-from tabulate import tabulate
-import time
-from selenium.webdriver.common.by import By
 from utils import send_text_message
+from geopy.geocoders import Nominatim
+# import scrapy
+from linebot.models import *
+from train import *
+from geopy.geocoders import Nominatim
+from fsm import TocMachine
 
-# get the website
-driver = webdriver.Chrome("D:\\chromedriver_win32\chromedriver") # open the chrome by chromedriver
-driver.get("https://www.railway.gov.tw/tra-tip-web/tip/tip001/tip112/gobytime") # open the page of 台鐵網站
-html = driver.find_element(By.CSS_SELECTOR,"*").get_attribute("outerHTML") # locate element by css selector
-doc = pq(html) # can get all nodes
-
-# start_station cities
-cities_startStation = {}
-citiesSort_startStation = {}
-
-# start_station 
-StationSort_startStation = {}
-
-# end_station cities
-cities_endStation = {}
-
-# end_station
-stationSort_endStation = {}
-
-# result of trains
-result_trans = []
-
-# original page
-last_url = ''
+train = Find_the_train()
+train.cities = set()
+train.stations = set()
+train.arrive = 0
+train.city = 0
+train.mode = 0
 
 class TocMachine(GraphMachine):
+
     def __init__(self, **machine_configs):
         self.machine = GraphMachine(model=self, **machine_configs)
-
+    ############### is going to ########################
     def is_going_to_search(self, event):
         text = event.message.text
-        return text.lower() == "查詢班次"
-
-# the start_station ============================================================================================================
-# print("縣市: ")
-# count = 2
-# for city in doc("#mainline > div:nth-child(1) > ul > li:nth-child(n+2)").items():# cities name in doc
-#     print(city.text()) # print all start station cities
-#     temp_city_id = doc("#mainline > div:nth-child(1) > ul > li:nth-child("+ str(count) +") > button").attr("data-type")
-#     citiesSort_startStation[city.text()] = count
-#     cities_startStation[city.text()] = temp_city_id # get city id
-#     count +=1
-    def on_enter_search(self, event):
-        print('search')
-        reply_token = event.reply_token
-        send_text_message(reply_token, "縣市: ")
-        count = 2
-        for city in doc("#mainline > div:nth-child(1) > ul > li:nth-child(n+2)").items():# cities name in doc
-            send_text_message(reply_token, city.text()) # print all start station cities
-            temp_city_id = doc("#mainline > div:nth-child(1) > ul > li:nth-child("+ str(count) +") > button").attr("data-type")
-            citiesSort_startStation[city.text()] = count
-            cities_startStation[city.text()] = temp_city_id # get city id
-            count +=1
-        self.go_back()
-
-    def is_going_to_state2(self, event):
-        text = event.message.text
-        return text.lower() == "go to state2"
-
+        return text.lower() == '查詢'
     
+    def is_going_to_location(self, event):
+        return event.message.type == 'location'
+    
+    def is_going_to_link(self, event):
+        text = event.message.text
+        return text.lower() == '訂位連結'
+    
+    def is_going_to_input_start_city(self, event):
+        text = event.message.text
+        return text in train.cities
+    
+    def is_going_to_input_start_station(self, event):
+        text = event.message.text
+        return text in train.stations
 
-    def on_exit_state1(self):
-        print("Leaving state1")
+    def is_going_to_input_end_city(self, event):
+        text = event.message.text
+        return text in train.cities
+    
+    def is_going_to_input_end_station(self, event):
+        text = event.message.text
+        return text in train.stations
+    
+    def is_going_to_input_date(self, event):
+        text = event.message.text
+        return train.time == 1
+    
+    def is_going_to_input_start_time(self, event):
+        text = event.message.text
+        return train.time == 2
+    
+    def is_going_to_input_end_time(self, event):
+        text = event.message.text
+        return train.time == 3
+    ################# on enter ###########################
+    def on_enter_search(self, event):
+        send_text_message(event.reply_token, '請輸入出發縣市:')
+    
+    def on_enter_location(self, event):
+        UserId = str(event.source.user_id)
+        geolocator = Nominatim(user_agent = f'{UserId}')
+        location = geolocator.reverse(f'{event.message.latitude}, {event.message.longitude}')
+        text=f'Get location message!\nYour User ID is [ {UserId} ]\n==-==-==-==-==-==-==-==-==-==-==\nCurrent location:\n{location.address}\n==-==-==-==-==-==-==-==-==-==-==\n{round(location.latitude, 6)}, {round(location.longitude, 6)}\n==-==-==-==-==-==-==-==-==-==-=='
+        send_text_message(event.reply_token, text)
+    
+    def on_enter_link(self, event):
+        text = 'https://www.railway.gov.tw/tra-tip-web/tip/tip001/tip121/query'
+        send_text_message(event.reply_token, text)
+        
+    def on_enter_start_city(self, event):
+        send_text_message(event.reply_token, '請輸入出發站:')
+    
+    def ion_enter_start_station(self, event):
+        send_text_message(event.reply_token, '請輸入抵達縣市:')
 
-    def on_enter_state2(self, event):
-        print("I'm entering state2")
+    def on_enter_end_city(self, event):
+        send_text_message(event.reply_token, '請輸入抵達站:')
+    
+    def on_enter_end_station(self, event):
+        send_text_message(event.reply_token, '請輸入日期(西元年/月/日): ')
+    
+    def on_enter_date(self, event):
+        send_text_message(event.reply_token, '請輸入出發時間(起): ')
+    
+    def on_enter_start_time(self, event):
+        send_text_message(event.reply_token, '請輸入出發時間(迄): ')
+    
+    def on_enter_end_time(self, event):
+        reply = ""
+        for result in train.result_doc("#pageContent > div > table > tbody > tr.trip-column").items(): 
+            temp_train_number = result.find("ul.train-number a").text()
+            temp_departure_time = result.children("td").eq(1).text()
+            temp_arrival_time = result.children("td").eq(2).text()
+            reply += f"{temp_train_number}:\n出發: {temp_departure_time} | 抵達: {temp_arrival_time}\n"
+        send_text_message(event.reply_token, reply)
 
-        reply_token = event.reply_token
-        send_text_message(reply_token, "Trigger state2")
-        self.go_back()
+machine =TocMachine(
+    states = ['user', 'search', 'location', 'link', 'start_city', 'start_station', 'end_city', 'end_station', 'date', 'start_time', 'end_time'],
+    transitions = [
+        {
+            'trigger': 'advance', 
+            'source': 'user', 
+            'dest': 'search', 
+            'conditions': 'is_going_to_search'
+        },
+        {
+            'trigger': 'advance', 
+            'source': 'user', 
+            'dest': 'location', 
+            'conditions': 'is_going_to_location'
+        },
+        {
+            'trigger': 'advance', 
+            'source': 'user', 
+            'dest': 'link', 
+            'conditions': 'is_going_to_link'
+        },
+        {
+            'trigger': 'advance', 
+            'source': 'search', 
+            'dest': 'start_city', 
+            'conditions': 'is_going_to_start_city'
+        },
+        {
+            'trigger': 'advance', 
+            'source': 'start_city', 
+            'dest': 'start_station', 
+            'conditions': 'is_going_to_start_station'
+        },
+        {
+            'trigger': 'advance', 
+            'source': 'start_station', 
+            'dest': 'end_city', 
+            'conditions': 'is_going_to_end_city'
+        },
+        {
+            'trigger': 'advance', 
+            'source': 'end_city', 
+            'dest': 'end_station', 
+            'conditions': 'is_going_to_end_station'
+        },
+        {
+            'trigger': 'advance', 
+            'source': 'end_station', 
+            'dest': 'date', 
+            'conditions': 'is_going_to_date'
+        },
+        {
+            'trigger': 'advance', 
+            'source': 'date', 
+            'dest': 'start_time', 
+            'conditions': 'is_going_to_start_time'
+        },
+        {
+            'trigger': 'advance', 
+            'source': 'start_time', 
+            'dest': 'end_time', 
+            'conditions': 'is_going_to_end_time'
+        },
+        { # back to user
+            'trigger': 'go_back', 
+            'source': ['search', 'search', 'location', 'link', 'start_city', 'start_station', 'end_city', 'end_station', 'date', 'start_time', 'end_time'],
+            'dest': 'user', 
+        },
+    ],
+    title = 'fsm',
+    initial='user',
+    auto_transitions=False,
+    show_conditions=True,
+)
 
-    def on_exit_state2(self):
-        print("Leaving state2")
+machine.get_graph().draw('fsm.png', prog='dot', format='png')
