@@ -16,10 +16,9 @@ class Find_the_train(GraphMachine):
         self.mode = 1
         self.cities_startStation ={}
         self.citiesSort_startStation ={}
-        # self.driver = type()
         # start_station 
         self.StationSort_startStation={}
-
+        self.count =0
         # end_station cities
         self.cities_endStation ={}
 
@@ -28,7 +27,6 @@ class Find_the_train(GraphMachine):
 
         # result of trains
         self.result_trans =[]
-        # self.driver = ""
 
         # original page
         self.last_url =''
@@ -37,7 +35,7 @@ class Find_the_train(GraphMachine):
     def find_the_web(self):
         # get the website
         self.driver = webdriver.Chrome("D:\\chromedriver_win32\chromedriver") # open the chrome by chromedriver
-        print(type(self.driver))
+        # print(type(self.driver))
         self.driver.get("https://www.railway.gov.tw/tra-tip-web/tip/tip001/tip112/gobytime") # open the page of 台鐵網站
         self.html = self.driver.find_element(By.CSS_SELECTOR,"*").get_attribute("outerHTML") # locate element by css selector
         self.doc = pq(self.html) # can get all nodes

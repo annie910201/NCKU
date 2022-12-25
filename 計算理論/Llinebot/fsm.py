@@ -1,11 +1,11 @@
 from transitions.extensions import GraphMachine
 from utils import send_text_message
-from geopy.geocoders import Nominatim
 # import scrapy
+from geopy.geocoders import Nominatim
 from linebot.models import *
 from train import *
-from geopy.geocoders import Nominatim
-from fsm import TocMachine
+from utils import * 
+# from fsm import TocMachine
 
 train = Find_the_train()
 train.cities = set()
@@ -19,6 +19,10 @@ class TocMachine(GraphMachine):
     def __init__(self, **machine_configs):
         self.machine = GraphMachine(model=self, **machine_configs)
     ############### is going to ########################
+    def is_going_to_start(self, event):
+        text = event.message.text
+        return True
+
     def is_going_to_search(self, event):
         text = event.message.text
         return text.lower() == '查詢'
@@ -58,6 +62,9 @@ class TocMachine(GraphMachine):
         text = event.message.text
         return train.time == 3
     ################# on enter ###########################
+    def on_enter_start(self,event):
+        user_name = ""
+        greet_send_button_message(event.reply_token, user_name)
     def on_enter_search(self, event):
         send_text_message(event.reply_token, '請輸入出發縣市:')
     
@@ -75,7 +82,7 @@ class TocMachine(GraphMachine):
     def on_enter_start_city(self, event):
         send_text_message(event.reply_token, '請輸入出發站:')
     
-    def ion_enter_start_station(self, event):
+    def on_enter_start_station(self, event):
         send_text_message(event.reply_token, '請輸入抵達縣市:')
 
     def on_enter_end_city(self, event):
@@ -100,13 +107,13 @@ class TocMachine(GraphMachine):
         send_text_message(event.reply_token, reply)
 
 machine =TocMachine(
-    states = ['user', 'search', 'location', 'link', 'start_city', 'start_station', 'end_city', 'end_station', 'date', 'start_time', 'end_time'],
+    states = ['user','start', 'search', 'location', 'link', 'start_city', 'start_station', 'end_city', 'end_station', 'date', 'start_time', 'end_time'],
     transitions = [
         {
             'trigger': 'advance', 
             'source': 'user', 
-            'dest': 'search', 
-            'conditions': 'is_going_to_search'
+            'dest': 'start', 
+            'conditions': 'is_going_to_start'
         },
         {
             'trigger': 'advance', 
@@ -116,7 +123,19 @@ machine =TocMachine(
         },
         {
             'trigger': 'advance', 
-            'source': 'user', 
+            'source': 'location', 
+            'dest': 'start', 
+            'conditions': 'is_going_to_start'
+        },
+        {
+            'trigger': 'advance', 
+            'source': 'start', 
+            'dest': 'search', 
+            'conditions': 'is_going_to_search'
+        },
+        {
+            'trigger': 'advance', 
+            'source': 'start', 
             'dest': 'link', 
             'conditions': 'is_going_to_link'
         },
@@ -162,10 +181,16 @@ machine =TocMachine(
             'dest': 'end_time', 
             'conditions': 'is_going_to_end_time'
         },
+        {
+            'trigger': 'advance', 
+            'source': ['start','location', 'search', 'link', 'start_city', 'start_station', 'end_city', 'end_station', 'date', 'start_time', 'end_time'], 
+            'dest': 'location', 
+            'conditions': 'is_going_to_location'
+        },
         { # back to user
             'trigger': 'go_back', 
-            'source': ['search', 'search', 'location', 'link', 'start_city', 'start_station', 'end_city', 'end_station', 'date', 'start_time', 'end_time'],
-            'dest': 'user', 
+            'source': ['search', 'link', 'start_city', 'start_station', 'end_city', 'end_station', 'date', 'start_time', 'end_time'],
+            'dest': 'start', 
         },
     ],
     title = 'fsm',

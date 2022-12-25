@@ -10,6 +10,7 @@ from linebot.models import *
 from geopy.geocoders import Nominatim
 from dotenv import load_dotenv
 from utils import *
+from linebot.exceptions import LineBotApiError
 load_dotenv()
 
 USER_ID = {}
@@ -30,11 +31,8 @@ def callback():
     return 'OK'
 
 
-# if receive the user message
+# initialize
 train = Find_the_train()
-train.cities = set()
-train.stations = set()
-train.mode = 1
 
 
 @handler.add(MessageEvent, message=TextMessage)
@@ -43,14 +41,19 @@ def handle_message(event):
         USER_ID[event.source.user_id] = Find_the_train()
         train = USER_ID[event.source.user_id]
         train.__init__
-        train.mode = 1
+        train.mode = 0
     else:
         train = USER_ID[event.source.user_id]
 
     try:
-        # print(type(webdriver.Chrome()))
         message_text = event.message.text
-        if message_text == 'back':
+        if train.mode == 0:
+            train.mode = 1
+            user_id = event.source.user_id
+            profile = linebot_api.get_profile(user_id)
+            user_name = profile.display_name
+            greet_send_button_message(event.reply_token, user_name)
+        elif message_text == 'back':
             train.mode = 1
             try:
                 train.driver.quit()
@@ -63,6 +66,7 @@ def handle_message(event):
             train.stations = set()
             train.__init__
             train.find_the_web()
+            # print(train.mode)
             reply = "縣市:\n"
             # cities name in doc
             for city in train.doc("#mainline > div:nth-child(1) > ul > li:nth-child(n+2)").items():
@@ -70,6 +74,7 @@ def handle_message(event):
                 reply += city.text()
                 reply += "\n"
             train.count = 2
+            # print(train.mode)
             # cities name in doc
             for city in train.doc("#mainline > div:nth-child(1) > ul > li:nth-child(n+2)").items():
                 train.temp_city_id = train.doc(
@@ -78,6 +83,7 @@ def handle_message(event):
                 train.cities_startStation[city.text(
                 )] = train.temp_city_id  # get city id
                 train.count += 1
+
             reply += "請輸入出發縣市:"
             train.mode = 2
             linebot_api.reply_message(
@@ -99,6 +105,7 @@ def handle_message(event):
             reply += "請輸入出發站:"
             linebot_api.reply_message(
                 event.reply_token, TextSendMessage(text=reply))
+
         elif message_text in train.stations and train.mode == 3:
             train.mode = 4
             train.input_startStation = message_text
@@ -130,59 +137,93 @@ def handle_message(event):
             linebot_api.reply_message(event.reply_token, TextSendMessage(
                 text='請輸入日期(西元年/月/日): \n(請輸入未來時間)'))
         elif train.mode == 6:
-            train.mode = 7
-            train.input_date = message_text
-            train.find_the_date()
-            linebot_api.reply_message(
-                event.reply_token, TextSendMessage(text='請輸入出發時間(起): '))
-
+            s = message_text.split('/', 2)
+            if (len(s) != 3):  # error input
+                train.mode = 1
+                error_send_button_message(event.reply_token, '[錯誤]\n輸入日期格式錯誤')
+                train.driver.quit()
+            else:
+                train.mode = 7
+                train.input_date = message_text
+                train.find_the_date()
+                linebot_api.reply_message(
+                    event.reply_token, TextSendMessage(text='請輸入出發時間(起): '))
         elif train.mode == 7:
-            train.mode = 8
-            train.input_startTime = message_text
-            train.find_the_begin()
-            linebot_api.reply_message(
-                event.reply_token, TextSendMessage(text='請輸入抵達時間(迄): '))
+            s = message_text.split(':', 1)
+            if (len(s) != 2):  # error input
+                train.mode = 1
+                error_send_button_message(event.reply_token, '[錯誤]\n輸入時間格式錯誤')
+                train.driver.quit()
+            else:
+                train.mode = 8
+                train.input_startTime = message_text
+                train.find_the_begin()
+                linebot_api.reply_message(
+                    event.reply_token, TextSendMessage(text='請輸入抵達時間(迄): '))
         elif train.mode == 8:
-            train.input_endTime = message_text
-            train.find_the_end()
-            reply = ""
-            for result in train.result_doc("#pageContent > div > table > tbody > tr.trip-column").items():
-                temp_train_number = result.find("ul.train-number a").text()
-                temp_departure_time = result.children("td").eq(1).text()
-                temp_arrival_time = result.children("td").eq(2).text()
-                reply += f"{temp_train_number}:\n出發: {temp_departure_time} | 抵達: {temp_arrival_time}\n"
-            linebot_api.reply_message(
-                event.reply_token, TextSendMessage(text=reply))
+            s = message_text.split(':', 1)
+            if (len(s) != 2):  # error input
+                train.mode = 1
+                error_send_button_message(event.reply_token, '[錯誤]\n輸入時間格式錯誤')
+                train.driver.quit()
+
+            else:
+                train.input_endTime = message_text
+                train.find_the_end()
+                reply = ""
+                for result in train.result_doc("#pageContent > div > table > tbody > tr.trip-column").items():
+                    temp_train_number = result.find("ul.train-number a").text()
+                    temp_departure_time = result.children("td").eq(1).text()
+                    temp_arrival_time = result.children("td").eq(2).text()
+                    reply += f"{temp_train_number}:\n出發: {temp_departure_time} | 抵達: {temp_arrival_time}\n"
+                linebot_api.reply_message(
+                    event.reply_token, TextSendMessage(text=reply))
             train.mode = 1
             train.driver.quit()
-
+# link==============================
         elif message_text == '訂位連結' and train.mode == 1:
             linebot_api.reply_message(
                 event.reply_token, TextSendMessage(text='[台鐵訂位連結]\nhttps://www.railway.gov.tw/tra-tip-web/tip/tip001/tip121/query\n'))
-
+# location==============================
+        elif event.message.type == 'location':
+            train.mode = 1
+            UserId = str(event.source.user_id)
+            geolocator = Nominatim(user_agent=f'{UserId}')
+            location = geolocator.reverse(
+                f'{event.message.latitude}, {event.message.longitude}')
+            linebot_api.reply_message(event.reply_token, TextSendMessage(
+                text=f'Get location message!\nYour User ID is [ {UserId} ]\n==-==-==-==-==-==-==-==-==-==-==\nCurrent location:\n{location.address}\n==-==-==-==-==-==-==-==-==-==-==\n所處緯度:{round(location.latitude, 6)}\n所處緯度:{round(location.longitude, 6)}\n==-==-==-==-==-==-==-==-==-==-=='))
+# other
         else:
             train.mode = 1
             try:
                 train.driver.quit()
             except:
                 Exception
-            error_send_button_message(event.reply_token)
+            error_send_button_message(
+                event.reply_token, '[錯誤可能原因]\n輸入格式或資料錯誤\n無此指令')
+# exception
     except:
         train.mode = 1
-        train.driver.quit()
-        error_send_button_message(event.reply_token)
+        try:
+            train.driver.quit()
+        except:
+            Exception
+        error_send_button_message(
+            event.reply_token, '[錯誤可能原因]\n輸入格式或資料錯誤\n查無此筆資料')
 
 
 @handler.add(MessageEvent, message=LocationMessage)
 def handle_location_message(event):
     if event.type == 'message':
-        if event.message.type == 'location' and train.mode == 1:
+        if event.message.type == 'location':
+            train.mode = 1
             UserId = str(event.source.user_id)
             geolocator = Nominatim(user_agent=f'{UserId}')
             location = geolocator.reverse(
                 f'{event.message.latitude}, {event.message.longitude}')
             linebot_api.reply_message(event.reply_token, TextSendMessage(
-                text=f'Get location message!\nYour User ID is [ {UserId} ]\n==-==-==-==-==-==-==-==-==-==-==\nCurrent location:\n{location.address}\n==-==-==-==-==-==-==-==-==-==-==\n{round(location.latitude, 6)}, {round(location.longitude, 6)}\n==-==-==-==-==-==-==-==-==-==-=='))
+                text=f'Get location message!\nYour User ID is [ {UserId} ]\n==-==-==-==-==-==-==-==-==-==-==\nCurrent location:\n{location.address}\n==-==-==-==-==-==-==-==-==-==-==\n所處緯度:{round(location.latitude, 6)}\n所處緯度:{round(location.longitude, 6)}\n==-==-==-==-==-==-==-==-==-==-=='))
         else:
             train.mode = 1
             train.driver.quit()
