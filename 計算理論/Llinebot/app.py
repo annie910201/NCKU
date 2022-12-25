@@ -1,7 +1,6 @@
 from flask import Flask
 from env import *
 import os
-import sys
 from flask import request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
@@ -10,6 +9,7 @@ from train import *
 from linebot.models import *
 from geopy.geocoders import Nominatim
 from dotenv import load_dotenv
+from utils import *
 load_dotenv()
 
 USER_ID = {}
@@ -29,25 +29,34 @@ def callback():
         abort(400)
     return 'OK'
 
+
 # if receive the user message
 train = Find_the_train()
+train.cities = set()
+train.stations = set()
+train.mode = 1
+
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     if event.source.user_id not in USER_ID:
         USER_ID[event.source.user_id] = Find_the_train()
         train = USER_ID[event.source.user_id]
+        train.__init__
         train.mode = 1
     else:
         train = USER_ID[event.source.user_id]
-    
+
     try:
+        # print(type(webdriver.Chrome()))
         message_text = event.message.text
         if message_text == 'back':
             train.mode = 1
-            train.driver.quit()
-            linebot_api.reply_message(
-                event.reply_token, TextSendMessage(text='回到起始狀態\n有效輸入:\n[查詢]\n[訂位連結]\n或者按左下角的"+"定位'))
+            try:
+                train.driver.quit()
+            except:
+                Exception
+            send_button_message(event.reply_token)
 
         elif message_text == "查詢" and train.mode == 1:
             train.cities = set()
@@ -153,14 +162,15 @@ def handle_message(event):
 
         else:
             train.mode = 1
-            train.driver.quit()
-            linebot_api.reply_message(
-                event.reply_token, TextSendMessage(text='[錯誤]\n[back]\n您可能輸入無效資料\n或者兩狀態之間互不相通\n已回到起始狀態\n有效輸入:\n[查詢]\n[訂位連結]\n或者按左下角的"+"定位'))
+            try:
+                train.driver.quit()
+            except:
+                Exception
+            error_send_button_message(event.reply_token)
     except:
         train.mode = 1
         train.driver.quit()
-        linebot_api.reply_message(event.reply_token, TextSendMessage(
-            text='[錯誤]\n您輸入無效資料\n已回到起始狀態\n有效輸入:\n[back]\n[查詢]\n[訂位連結]\n或者按左下角的"+"定位'))
+        error_send_button_message(event.reply_token)
 
 
 @handler.add(MessageEvent, message=LocationMessage)
@@ -181,6 +191,6 @@ def handle_location_message(event):
 
 
 if __name__ == '__main__':
-    app.run()
-    # port = os.environ.get("PORT", 8000)
-    # app.run(host="0.0.0.0", port=port, debug = True)
+    # app.run()
+    port = os.environ.get("PORT", 8000)
+    app.run(host="0.0.0.0", port=port, debug=True)
