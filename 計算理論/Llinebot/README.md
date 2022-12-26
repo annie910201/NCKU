@@ -6,7 +6,8 @@
 因為每次回家都需要坐火車，想製作一個機器人可以即時查詢班次
 
 ## Finite State Machine
-![](https://i.imgur.com/yVv9Cf2.png)
+![](https://i.imgur.com/OkWslGn.png)
+
 
 - state:
     - ```user```: 初始模式，使用者無論輸入甚麼都會直接進入start
