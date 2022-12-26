@@ -6,7 +6,7 @@
 因為每次回家都需要坐火車，想製作一個機器人可以即時查詢班次
 
 ## Finite State Machine
-![](https://i.imgur.com/YIJWrxo.png)
+![](https://i.imgur.com/yVv9Cf2.png)
 
 - state:
     - ```user```: 初始模式，使用者無論輸入甚麼都會直接進入start
@@ -21,7 +21,16 @@
     - ```date```: 獲取日期
     - ```start_time```: 獲取預計起始時間
     - ```end_time```: 獲取預計抵達時間
-- 模擬圖:
+- 執行講解: 
+    - 一開始執行app.py會進入user mode
+    - 隨意輸入之後會進入start mode並選擇想要的功能
+    - 進入search之後若有資料輸入錯誤便會跳回start mode
+        - 若出發.抵達站或城市的資料輸入錯誤會重新回到該模式
+        - 若日期.時間的資料格式輸入錯誤可以重新回到該模式(若輸入錯誤資料會等到最後到end_station才跳回)
+    - link可以回傳台鐵訂票網站連結並回到start mode
+    - location可在任何模式時切入，輸出完資料後會回到start mode
+    - 在任意mode皆可輸入back回到start mode
+- 模擬圖
     :::spoiler 起始狀態
     ![](https://i.imgur.com/RVNKvXt.jpg)
     :::
@@ -38,14 +47,17 @@
     ![](https://i.imgur.com/7iHdjnz.jpg)
     :::
     :::spoiler 錯誤訊息
-    日期輸入錯誤
-        ![](https://i.imgur.com/1aCQAsH.jpg)
-    時間輸入錯誤
-        ![](https://i.imgur.com/YxDDG4R.jpg)
-    該時段班次不存在
-        ![](https://i.imgur.com/rdb7Eai.jpg)
-    不存在指令
-        ![](https://i.imgur.com/KvdKCEU.jpg)
+    站名或城市輸入錯誤
+    ![](https://i.imgur.com/25YI3Ug.jpg)
+
+    時間或日期格式輸入錯誤
+    ![](https://i.imgur.com/jJkmIMV.jpg)
+
+    查無班次
+    ![](https://i.imgur.com/NmwOu1D.jpg)
+
+    不存在的指令
+    ![](https://i.imgur.com/KvdKCEU.jpg)
     :::
 
 ## Setup
