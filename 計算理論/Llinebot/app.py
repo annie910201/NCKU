@@ -88,84 +88,104 @@ def handle_message(event):
             train.mode = 2
             linebot_api.reply_message(
                 event.reply_token, TextSendMessage(text=reply))
-        elif message_text in train.cities and train.mode == 2:
-            train.mode = 3
-            train.input_startStationCity = message_text
-            train.find_the_start_city()
-            reply = "站名:\n"
-            for station in train.doc("#{0} > ul > li:nth-child(n+1) > button".format(train.cities_startStation[train.input_startStationCity])).items():
-                train.stations.add(station.text())
-                reply += station.text()
-                reply += "\n"
-            train.stationCount = 1
-            for station in train.doc("#{0} > ul > li:nth-child(n+1) > button".format(train.cities_startStation[train.input_startStationCity])).items():
-                train.StationSort_startStation[station.text(
-                )] = train.stationCount
-                train.stationCount += 1
-            reply += "請輸入出發站:"
-            linebot_api.reply_message(
-                event.reply_token, TextSendMessage(text=reply))
+        elif train.mode == 2:
+            if message_text not in train.cities :
+                train.mode = 2
+                linebot_api.reply_message(event.reply_token, TextSendMessage(
+                text='[輸入錯誤]\n請再輸入一次\n\n請輸入出發縣市:'))
+            else:
+                train.mode = 3
+                train.input_startStationCity = message_text
+                train.find_the_start_city()
+                reply = "站名:\n"
+                for station in train.doc("#{0} > ul > li:nth-child(n+1) > button".format(train.cities_startStation[train.input_startStationCity])).items():
+                    train.stations.add(station.text())
+                    reply += station.text()
+                    reply += "\n"
+                train.stationCount = 1
+                for station in train.doc("#{0} > ul > li:nth-child(n+1) > button".format(train.cities_startStation[train.input_startStationCity])).items():
+                    train.StationSort_startStation[station.text(
+                    )] = train.stationCount
+                    train.stationCount += 1
+                reply += "請輸入出發站:"
+                linebot_api.reply_message(
+                    event.reply_token, TextSendMessage(text=reply))
 
-        elif message_text in train.stations and train.mode == 3:
-            train.mode = 4
-            train.input_startStation = message_text
-            train.find_the_start_station()
-            linebot_api.reply_message(
-                event.reply_token, TextSendMessage(text='請輸入抵達縣市: '))
-        elif message_text in train.cities and train.mode == 4:
-            train.stations.clear()
-            train.mode = 5
-            train.input_endStationCity = message_text
-            train.find_the_end_city()
-            reply = "站名:\n"
-            for station in train.doc("#{0} > ul > li:nth-child(n+1) > button".format(train.cities_startStation[train.input_endStationCity])).items():
-                train.stations.add(station.text())
-                reply += station.text()
-                reply += "\n"
-            train.endStationCount = 1
-            for station in train.doc("#{0} > ul > li:nth-child(n+1) > button".format(train.cities_startStation[train.input_endStationCity])).items():
-                train.stationSort_endStation[station.text(
-                )] = train.endStationCount
-                train.endStationCount += 1
-            reply += "請輸入抵達站:"
-            linebot_api.reply_message(
+        elif train.mode == 3:
+            if message_text not in train.stations:
+                train.mode = 3
+                linebot_api.reply_message(event.reply_token, TextSendMessage(
+                text='[輸入錯誤]\n請再輸入一次\n\n請輸入出發站:'))
+            else:
+                train.mode = 4
+                train.input_startStation = message_text
+                train.find_the_start_station()
+                linebot_api.reply_message(
+                    event.reply_token, TextSendMessage(text='請輸入抵達縣市: '))
+        elif train.mode == 4:
+            if message_text not in train.cities:
+                train.mode = 4
+                linebot_api.reply_message(event.reply_token, TextSendMessage(
+                text='[輸入錯誤]\n請再輸入一次\n\n請輸入抵達縣市: '))
+            else:
+                train.stations.clear()
+                train.mode = 5
+                train.input_endStationCity = message_text
+                train.find_the_end_city()
+                reply = "站名:\n"
+                for station in train.doc("#{0} > ul > li:nth-child(n+1) > button".format(train.cities_startStation[train.input_endStationCity])).items():
+                    train.stations.add(station.text())
+                    reply += station.text()
+                    reply += "\n"
+                train.endStationCount = 1
+                for station in train.doc("#{0} > ul > li:nth-child(n+1) > button".format(train.cities_startStation[train.input_endStationCity])).items():
+                    train.stationSort_endStation[station.text(
+                    )] = train.endStationCount
+                    train.endStationCount += 1
+                reply += "請輸入抵達站:"
+                linebot_api.reply_message(
                 event.reply_token, TextSendMessage(text=reply))
-        elif message_text in train.stations and train.mode == 5:
-            train.input_endStation = message_text
-            train.find_the_end_station()
-            train.mode = 6
-            linebot_api.reply_message(event.reply_token, TextSendMessage(
-                text='請輸入日期(西元年/月/日): \n(請輸入未來時間)'))
+        elif train.mode == 5:
+            if message_text not in train.stations:
+                train.mode = 5
+                linebot_api.reply_message(event.reply_token, TextSendMessage(
+                text='[輸入錯誤]\n請再輸入一次\n\n請輸入抵達站: '))
+            else:
+                train.input_endStation = message_text
+                train.find_the_end_station()
+                train.mode = 6
+                linebot_api.reply_message(event.reply_token, TextSendMessage(
+                    text='請輸入日期(西元年/月/日): \n(請輸入未來時間)'))
         elif train.mode == 6:
-            s = message_text.split('/', 2)
+            s = message_text.split('/')
             if (len(s) != 3):  # error input
-                train.mode = 1
-                error_send_button_message(event.reply_token, '[錯誤]\n輸入日期格式錯誤')
-                train.driver.quit()
+                train.mode = 6
+                linebot_api.reply_message(event.reply_token, TextSendMessage(
+                text='[輸入錯誤]\n請再輸入一次\n\n請輸入日期(西元年/月/日): \n(請輸入未來時間)'))
             else:
                 train.mode = 7
                 train.input_date = message_text
                 train.find_the_date()
                 linebot_api.reply_message(
-                    event.reply_token, TextSendMessage(text='請輸入出發時間(起): '))
+                    event.reply_token, TextSendMessage(text='請輸入出發時間(小時:分): '))
         elif train.mode == 7:
-            s = message_text.split(':', 1)
+            s = message_text.split(':')
             if (len(s) != 2):  # error input
-                train.mode = 1
-                error_send_button_message(event.reply_token, '[錯誤]\n輸入時間格式錯誤')
-                train.driver.quit()
+                train.mode = 7
+                linebot_api.reply_message(event.reply_token, TextSendMessage(
+                text='[輸入錯誤]\n請再輸入一次\n\n請輸入出發時間(小時:分): '))
             else:
                 train.mode = 8
                 train.input_startTime = message_text
                 train.find_the_begin()
                 linebot_api.reply_message(
-                    event.reply_token, TextSendMessage(text='請輸入抵達時間(迄): '))
+                    event.reply_token, TextSendMessage(text='請輸入抵達時間(小時:分): '))
         elif train.mode == 8:
-            s = message_text.split(':', 1)
+            s = message_text.split(':')
             if (len(s) != 2):  # error input
-                train.mode = 1
-                error_send_button_message(event.reply_token, '[錯誤]\n輸入時間格式錯誤')
-                train.driver.quit()
+                train.mode = 8
+                linebot_api.reply_message(event.reply_token, TextSendMessage(
+                text='[輸入錯誤]\n請再輸入一次\n\n請輸入抵達時間(小時:分): '))
 
             else:
                 train.input_endTime = message_text
@@ -178,8 +198,8 @@ def handle_message(event):
                     reply += f"{temp_train_number}:\n出發: {temp_departure_time} | 抵達: {temp_arrival_time}\n"
                 linebot_api.reply_message(
                     event.reply_token, TextSendMessage(text=reply))
-            train.mode = 1
-            train.driver.quit()
+                train.mode = 1
+                train.driver.quit()
 # link==============================
         elif message_text == '訂位連結' and train.mode == 1:
             linebot_api.reply_message(
@@ -223,7 +243,7 @@ def handle_location_message(event):
             location = geolocator.reverse(
                 f'{event.message.latitude}, {event.message.longitude}')
             linebot_api.reply_message(event.reply_token, TextSendMessage(
-                text=f'Get location message!\nYour User ID is [ {UserId} ]\n==-==-==-==-==-==-==-==-==-==-==\nCurrent location:\n{location.address}\n==-==-==-==-==-==-==-==-==-==-==\n所處緯度:{round(location.latitude, 6)}\n所處緯度:{round(location.longitude, 6)}\n==-==-==-==-==-==-==-==-==-==-=='))
+                text=f'Get location message!\nYour User ID is [ {UserId} ]\n==-==-==-==-==-==-==-==-==-==-==\nCurrent location:\n{location.address}\n==-==-==-==-==-==-==-==-==-==-==\n所處緯度:{round(location.latitude, 6)}\n所處經度:{round(location.longitude, 6)}\n==-==-==-==-==-==-==-==-==-==-=='))
         else:
             train.mode = 1
             train.driver.quit()

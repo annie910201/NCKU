@@ -153,6 +153,18 @@ machine =TocMachine(
         },
         {
             'trigger': 'advance', 
+            'source': 'start_city', 
+            'dest': 'start_city', 
+            'conditions': 'is_going_to_start_city'
+        },
+        {
+            'trigger': 'advance', 
+            'source': 'start_station', 
+            'dest': 'start_station', 
+            'conditions': 'is_going_to_start_station'
+        },
+        {
+            'trigger': 'advance', 
             'source': 'start_station', 
             'dest': 'end_city', 
             'conditions': 'is_going_to_end_city'
@@ -165,7 +177,25 @@ machine =TocMachine(
         },
         {
             'trigger': 'advance', 
+            'source': 'end_city', 
+            'dest': 'end_city', 
+            'conditions': 'is_going_to_end_city'
+        },
+        {
+            'trigger': 'advance', 
             'source': 'end_station', 
+            'dest': 'end_station', 
+            'conditions': 'is_going_to_end_station'
+        },
+        {
+            'trigger': 'advance', 
+            'source': 'end_station', 
+            'dest': 'date', 
+            'conditions': 'is_going_to_date'
+        },
+        {
+            'trigger': 'advance', 
+            'source': 'date', 
             'dest': 'date', 
             'conditions': 'is_going_to_date'
         },
@@ -178,6 +208,18 @@ machine =TocMachine(
         {
             'trigger': 'advance', 
             'source': 'start_time', 
+            'dest': 'end_time', 
+            'conditions': 'is_going_to_end_time'
+        },
+        {
+            'trigger': 'advance', 
+            'source': 'start_time', 
+            'dest': 'start_time', 
+            'conditions': 'is_going_to_start_time'
+        },
+        {
+            'trigger': 'advance', 
+            'source': 'end_time', 
             'dest': 'end_time', 
             'conditions': 'is_going_to_end_time'
         },
