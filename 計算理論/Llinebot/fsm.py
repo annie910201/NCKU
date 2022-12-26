@@ -61,7 +61,16 @@ class TocMachine(GraphMachine):
     def is_going_to_input_end_time(self, event):
         text = event.message.text
         return train.time == 3
+    
+    def restart(self, event, correct_text):
+        text = event.message.text
+        if(text != correct_text):
+            return True
+        else:
+            return False
     ################# on enter ###########################
+    def on_restart(mode):
+        train.mode = mode
     def on_enter_start(self,event):
         user_name = ""
         greet_send_button_message(event.reply_token, user_name)
@@ -155,13 +164,13 @@ machine =TocMachine(
             'trigger': 'advance', 
             'source': 'start_city', 
             'dest': 'start_city', 
-            'conditions': 'is_going_to_start_city'
+            'conditions': 'restart'
         },
         {
             'trigger': 'advance', 
             'source': 'start_station', 
             'dest': 'start_station', 
-            'conditions': 'is_going_to_start_station'
+            'conditions': 'restart'
         },
         {
             'trigger': 'advance', 
@@ -179,13 +188,13 @@ machine =TocMachine(
             'trigger': 'advance', 
             'source': 'end_city', 
             'dest': 'end_city', 
-            'conditions': 'is_going_to_end_city'
+            'conditions': 'restart'
         },
         {
             'trigger': 'advance', 
             'source': 'end_station', 
             'dest': 'end_station', 
-            'conditions': 'is_going_to_end_station'
+            'conditions': 'restart'
         },
         {
             'trigger': 'advance', 
@@ -197,7 +206,7 @@ machine =TocMachine(
             'trigger': 'advance', 
             'source': 'date', 
             'dest': 'date', 
-            'conditions': 'is_going_to_date'
+            'conditions': 'restart'
         },
         {
             'trigger': 'advance', 
@@ -215,13 +224,13 @@ machine =TocMachine(
             'trigger': 'advance', 
             'source': 'start_time', 
             'dest': 'start_time', 
-            'conditions': 'is_going_to_start_time'
+            'conditions': 'restart'
         },
         {
             'trigger': 'advance', 
             'source': 'end_time', 
             'dest': 'end_time', 
-            'conditions': 'is_going_to_end_time'
+            'conditions': 'restart'
         },
         {
             'trigger': 'advance', 
@@ -231,7 +240,7 @@ machine =TocMachine(
         },
         { # back to user
             'trigger': 'go_back', 
-            'source': ['search', 'link', 'start_city', 'start_station', 'end_city', 'end_station', 'date', 'start_time', 'end_time'],
+            'source': ['start', 'search', 'link', 'start_city', 'start_station', 'end_city', 'end_station', 'date', 'start_time', 'end_time'],
             'dest': 'start', 
         },
     ],
