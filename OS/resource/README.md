@@ -1,6 +1,6 @@
 [聯合大學作業系統講義(中文)](http://debussy.im.nuu.edu.tw/sjchen/OS_Final.html)
 
-[Mr. Opengate: 按照恐龍書寫的網頁，中文](https://mropengate.blogspot.com/2017/09/operating-system-concepts.html)
+[Mr. Opengate: 按照恐龍書寫的網頁(中文)](https://mropengate.blogspot.com/2017/09/operating-system-concepts.html)
 
 [2015_洪毅_作業系統講義](https://drive.google.com/file/u/1/d/1CpC3XYmxW3zFb7YxAoEUq755t9l5tbuo/view?usp=drivesdk)
 
