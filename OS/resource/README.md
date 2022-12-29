@@ -9,3 +9,5 @@
 [恐龍書中文版本(簡體QQ)](https://github.com/zhanglizeyi/CSE120/blob/master/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E6%A6%82%E5%BF%B5%E7%AC%AC%E4%B8%83%E7%89%88%E4%B8%AD%E6%96%87%E7%89%88.pdf)
 
 [非本科系也能懂和該懂得作業系統系列(這個講超讚，有按照課本順序，很多內容都有))](https://ithelp.ithome.com.tw/m/users/20111565/ironman/2265)
+
+[資訊人筆記](https://www.kshuang.xyz/doku.php/operating_system:course_concept:cpu_scheduling)
