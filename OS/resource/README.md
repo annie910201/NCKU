@@ -11,3 +11,5 @@
 [非本科系也能懂和該懂得作業系統系列(這個講超讚，有按照課本順序，很多內容都有))](https://ithelp.ithome.com.tw/m/users/20111565/ironman/2265)
 
 [資訊人筆記](https://www.kshuang.xyz/doku.php/operating_system:course_concept:cpu_scheduling)
+
+[作業系統概論系列](https://ithelp.ithome.com.tw/users/20112086/ironman/1851)
