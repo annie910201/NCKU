@@ -13,3 +13,5 @@
 [資訊人筆記](https://www.kshuang.xyz/doku.php/operating_system:course_concept:cpu_scheduling)
 
 [作業系統概論系列](https://ithelp.ithome.com.tw/users/20112086/ironman/1851)
+
+[OS作業系統學習系列](https://ithelp.ithome.com.tw/users/20112132/ironman/1884)
