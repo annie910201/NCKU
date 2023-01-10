@@ -1,111 +1,67 @@
-#include <xc.h>
-#include <stdio.h>
-#include <pic18f4520.h>
+# Final Project
+### 組長: 吳驊明
+### 組員: 林欣諴、陳柏佑、尤莙琇
 
-#pragma config OSC = INTIO67 // Oscillator Selection bits
-#pragma config WDT = OFF     // Watchdog Timer Enable bit
-#pragma config PWRT = OFF    // Power-up Enable bit
-#pragma config BOREN = ON    // Brown-out Reset Enable bit
-#pragma config PBADEN = OFF  // Watchdog Timer Enable bit
-#pragma config LVP = OFF     // Low Voltage (single -supply) In-Circute Serial Pragramming Enable bit
-#pragma config CPD = OFF     // Data EEPROM?Memory Code Protection bit (Data EEPROM code protection off)
-#define _XTAL_FREQ 8000000   //delay
-/*
-0   0xf7
-1   0x24
-2   0xdd
-3   0xed
-4   0x2e
-5   0x6b
-6   0xfb
-7   0x25
-8   0xff
-9   0x6f
-*/
+# 投籃機
+### 系統功能與原理說明
+- 系統功能: 在有限時間內，當球投入籃框，可以去偵測並計分
+- 原理說明: 利用紅外線及超音波傳感器，偵測球是否投入籃框，並搭配timer計時並以七段顯示器顯示
+### 系統使用環境及對象
+- 系統使用環境: MPLAB v5.20
+- 語言: C
+- 編譯器: XC8 v2.40
+- 燒錄器: picket3. picket4
+- 晶片: PIC18F4520
+### 系統完整架構圖、流程圖、電路圖、設計
+- 系統完整架構圖
+![](https://i.imgur.com/GUKKmoa.png)
 
-void main(void)
-{
-    /* table of seven segment */
-    unsigned char number[] = {0xf7, 0x24, 0xdd, 0xed, 0x2e, 0x6b, 0xfb, 0x25, 0xff, 0x6f};
+- 流程圖
+![](https://i.imgur.com/E6PdPs0.png)
 
-    ADCON1 = 0X0F;
+- 電路圖
+![](https://i.imgur.com/RLidven.png)
+
+- 設計
+    1. 按下按鈕，開啟timer，並顯示在七段顯示器上
+    2. timer傳送訊號給計分用的pic18
+    3. pic18開始接收超音波傳感器來的訊號
+    4. 球投入之後觸發紅外線傳感器
+    5. 紅外線傳感器接收後觸發並傳送訊號使超音波傳感器計算距離
+    6. 若距離在規定範圍內(5cm左右)，會傳送訊號記分板加分並以七段顯示器上顯示
+    7. 若再次按下button，則計時重新開始
+### 系統開發工具、材料及技術
+- 開發工具、材料: 
+    - PIC18F4520
+    - 紅外線障蔽傳感器 MH-B
+    - 超音波傳感器 HC-SR04
+    - 七段顯示器 C-583Q-12 BVN-7572SR4
+    - button 
     
-    /* set oscillator */
-    OSCCON = 0X60;
-    /* set timer */
-    T0CON = 0X07;
-    TMR0H = 0XF0;
-    TMR0L = 0XBE;
-
-    /* set input and output port */
-    TRISA = 0;    // output
-    TRISD = 0;    // output
-    TRISB = 0X01; //  input
-    
-    /* claer flag */
-    INTCONbits.TMR0IF = 0;
-
-    /* initialize digit1 and digit2 */
-    LATA = number[6];
-    LATD = number[0];
-
-    PORTBbits.RB1 = 0;//signal to grade
-
-    while (PORTBbits.RB0 == 1);
-    T0CONbits.TMR0ON = 1;//if button is clicked, timer is on
-
-    int count_time = 60;
-    while (1)
-    {
-
-        while (!INTCONbits.TMR0IF)
-        {
-            if (T0CONbits.TMR0ON == 0)
-                PORTBbits.RB1 = 0;
-            else
-                PORTBbits.RB1 = 1;
-
-            if (PORTBbits.RB0 == 0)
-            {
-                if (T0CONbits.TMR0ON == 0)//restart
-                    T0CONbits.TMR0ON = 1;
-
-                else//pause
-                {
-                    T0CONbits.TMR0ON = 0;
-                    count_time = 60;
-                    LATA = number[6];
-                    LATD = number[0];
-                }
-                __delay_ms(200);
-            }
-        }
-        if (count_time != 0 && T0CONbits.TMR0ON == 1)
-        {
-            /* display time */
-            count_time--;
-            int dig1 = count_time / 10;
-            int dig2 = count_time % 10;
-            LATA = number[dig1];
-            LATD = number[dig2];
-            /* reset timer0*/
-            TMR0H = 0XF0;
-            TMR0L = 0XBE;
-            INTCONbits.TMR0IF = 0;
-        }
-        /* count to 0 */
-        else if(count_time == 0 && T0CONbits.TMR0ON == 1){
-            LATA = number[6];
-            LATD = number[0];
-            TMR0H = 0XF0;
-            TMR0L = 0XBE;
-            INTCONbits.TMR0IF = 0;
-            T0CONbits.TMR0ON = 0;
-        }
-        else
-            T0CONbits.TMR0ON = 0;
-    }
-
-    while (1);
-    return;
-}
+- 系統開發技術
+    - 單元項目
+        - interrupt
+        - timer (Timer0)
+            - crystal freq = 4M Hz
+            - prescalar = 1:256
+            - cycles = 3906
+            - TMR0H = F0
+            - TMR0L = BE
+    - 進階項目 
+        - 紅外線障蔽傳感器
+        - 超音波傳感器
+<!-- ### 周邊接口或Library 及API使用說明 -->
+### 實際組員之分工項目
+- 吳驊明: 超音波傳感器、傳感器整合、測試、製作道具
+- 陳柏佑: 紅外線障蔽傳感器、傳感器整合、測試、製作道具
+- 林欣諴: 七段顯示器計分部分、整合傳感器跟計時、測試、製作道具
+- 尤莙琇: 七段顯示器計時部分、timer、button、測試、report製作
+### 遇到的困難及如何解決
+- 困難: 多個晶片的整合會有訊號錯亂的問題
+    - 解決方法: 將三個晶片一起接地
+- 困難: 原本打算使用LCD顯示分數跟時間，但只有I2C可以用杜邦線，可是SDA跟SCL在傳輸上有困難，有些資料說安裝MCC但MPLAB版本過低無法安裝，安裝新版本後又有問題，而我們購買的型號大多使用在arduino上，使用在pic的資料過少，需要安裝的library在MPLAB上面沒有
+    - 解決方法: 改成七段顯示器
+- 困難: 七段顯示器2.3digit的pin腳資料由於各個型號各異，沒有統一資料
+    - 解決方法: 一根一根pin腳測試
+- 困難: 實際接上籃框後，sensor時有時無
+    - 解決方法: 一直喬角度，或者打一下sensor就會正常了
