@@ -18,6 +18,7 @@
 - 流程圖
 ![](https://i.imgur.com/E6PdPs0.png)
 - 電路圖
+![](https://i.imgur.com/RLidven.png)
 - 設計
     1. 按下按鈕，開啟timer，並顯示在七段顯示器上
     2. timer傳送訊號給計分用的pic18
