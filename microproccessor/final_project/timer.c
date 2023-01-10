@@ -25,7 +25,7 @@
 
 void main(void)
 {
-    /* table of light*/
+    /* table of seven segment */
     unsigned char number[] = {0xf7, 0x24, 0xdd, 0xed, 0x2e, 0x6b, 0xfb, 0x25, 0xff, 0x6f};
 
     ADCON1 = 0X0F;
