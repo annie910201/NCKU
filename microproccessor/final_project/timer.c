@@ -93,7 +93,15 @@ void main(void)
             TMR0L = 0XBE;
             INTCONbits.TMR0IF = 0;
         }
-
+        /* count to 0 */
+        else if(count_time == 0 && T0CONbits.TMR0ON == 1){
+            LATA = number[6];
+            LATD = number[0];
+            TMR0H = 0XF0;
+            TMR0L = 0XBE;
+            INTCONbits.TMR0IF = 0;
+            T0CONbits.TMR0ON = 0;
+        }
         else
             T0CONbits.TMR0ON = 0;
     }
