@@ -142,7 +142,7 @@ void main(void) {
             if(judge == 0)
                 score += 1;
             seven_segment(score);
-            __delay_ms(20); // To be change the value
+            __delay_ms(40); // To be change the value
         } else {
             score = 0;
             judge = 0;
