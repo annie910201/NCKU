@@ -52,12 +52,26 @@ void main(void)
     PORTBbits.RB1 = 0;//signal to grade
 
     while (PORTBbits.RB0 == 1);
+     __delay_ms(200);
     T0CONbits.TMR0ON = 1;//if button is clicked, timer is on
 
     int count_time = 60;
     while (1)
     {
+        if (PORTBbits.RB0 == 0)
+            {
+                if (T0CONbits.TMR0ON == 0)//restart
+                    T0CONbits.TMR0ON = 1;
 
+                else//pause
+                {
+                    T0CONbits.TMR0ON = 0;
+                    count_time = 60;
+                    LATA = number[6];
+                    LATD = number[0];
+                }
+                __delay_ms(200);
+            }
         while (!INTCONbits.TMR0IF)
         {
             if (T0CONbits.TMR0ON == 0)
