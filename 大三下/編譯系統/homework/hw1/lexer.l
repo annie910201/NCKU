@@ -71,7 +71,7 @@ id {letter}+({letter}|{digit})*
 "["          { print_token("LBRACK"); }
 "]"          { print_token("RBRACK"); }
 "{"          { print_token("LBRACE"); }
-"}"          { print_token("RBRACE"); }
+"}"          { print_token("\tRBRACE"); }
 ";"          { print_token("SEMICOLON"); }
 ","          { print_token("COMMA"); }
 "\n"          { print_token("NEWLINE"); line_num++;}
