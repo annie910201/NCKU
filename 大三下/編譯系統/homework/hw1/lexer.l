@@ -71,7 +71,7 @@ id {letter}+({letter}|{digit})*
 "["          { print_token("LBRACK"); }
 "]"          { print_token("RBRACK"); }
 "{"          { print_token("LBRACE"); }
-"}"          { print_token("\tRBRACE"); }
+"}"          { print_token("RBRACE"); }
 ";"          { print_token("SEMICOLON"); }
 ","          { print_token("COMMA"); }
 "\n"          { print_token("NEWLINE"); line_num++;}
@@ -110,7 +110,8 @@ id {letter}+({letter}|{digit})*
     print_token("QUOTA");
 }
 <Cpp_comment>[^\n]* { 
-    print_token("COMMENT"); 
+    // print_token("COMMENT"); 
+    printf("%-6s \t COMMENT\n",yytext);
 }
 <Cpp_comment>"\n" { 
     BEGIN(INITIAL);
