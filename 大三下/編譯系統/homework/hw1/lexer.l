@@ -144,9 +144,11 @@ id {letter}+({letter}|{digit})*
     line_num++;
     flag = 1;
 }
-
+<C_comment>   {
+    print_token("");  
+}
 {}
- 
+
 <<EOF>>     { line_num++; yyterminate(); }
 [ \t]+      {;}
 .           {;}
