@@ -1,7 +1,7 @@
 ### 111/112的考題差異不大，很多都有重複考到，但計算會改數字
 - 考FDM跟TDM的差異
     - ![](https://i.imgur.com/w8Wzn0f.jpg)
-- 四個delay挖空
+- 四個delay挖空格要填空，並解釋packet loss 跟 delay原因
     - [ ] ![](https://i.imgur.com/pxqtAaR.jpg)
 - 計算沒有cache/有cache所需delay
     - ![](https://i.imgur.com/E2XDejr.jpg)
