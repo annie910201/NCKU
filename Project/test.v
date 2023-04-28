@@ -83,7 +83,7 @@ module image_processor#(
             GET_TWO:
                 next_state = (count_neighbor == 3'd3)?WRITE_RES:GET_TWO;
             WRITE_RES:
-                next_state = (o_addr == DATA_LENGTH - 400)?FINISH:CHECK_LOC;
+		    next_state = (o_addr == DATA_LENGTH - 401)?FINISH:CHECK_LOC;
             FINISH:
                 next_state = FINISH;
             default:
