@@ -1,7 +1,7 @@
 module image_processor#(
     parameter DATA_WIDTH = 12,
     parameter ADDR_WIDTH = 19,
-    parameter DATA_LENGTH = 120000
+    parameter DATA_LENGTH = 120000 //400 * 300
     )(
     input           clk_p,
     input           rst,
@@ -136,6 +136,18 @@ module image_processor#(
         o_addr <= location;
     end
 
+    // output_valid
+    always @(posedge clk_p) begin
+    if(rst)
+        output_valid <= 0;
+    else if(current_state == READ_GRAY)
+        output_valid <= 1;
+    else if(next_state == WRITE_RES)
+        output_valid <= 1;
+    else 
+        output_valid <= 0;
+    end
+
     // data_out
     always @(posedge clk_p) begin
     if(rst)
@@ -145,7 +157,7 @@ module image_processor#(
     else if(next_state == WRITE_RES)begin
         if(current_state == GET_TWO)
             data_out <= {sum1[3:0], sum1[3:0],sum1[3:0]} ;
-        else begin
+        else begin //GET_SIX
             if(d2 <= d1 && d2 <= d3)
 			    data_out <= {sum2[3:0], sum2[3:0],sum2[3:0]} ;
             else if(d1 <= d3)
@@ -164,6 +176,16 @@ module image_processor#(
         counter <= counter+1;
     else if(current_state == WRITE_RES && counter == 399)
         counter <= 0;
+    end
+
+    // count_neighbor
+    always @(posedge clk_p) begin
+    if(rst)
+        count_neighbor <= 0;
+    else if(next_state == GET_SIX || next_state == GET_TWO)
+        count_neighbor <= count_neighbor + 1;
+    else if(current_state == WRITE_RES)
+        count_neighbor <= 0;
     end
 
     // location
@@ -218,6 +240,14 @@ module image_processor#(
             end
         endcase
     end
+    end
+
+    // all_ready
+    always @(posedge clk_p) begin
+        if(rst)
+            all_ready <= 0;
+        else if(next_state == FINISH)
+            all_ready <= 1;
     end
     
 endmodule
