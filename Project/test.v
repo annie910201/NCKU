@@ -83,7 +83,7 @@ module image_processor#(
             GET_TWO:
                 next_state = (count_neighbor == 3'd3)?WRITE_RES:GET_TWO;
             WRITE_RES:
-		    next_state = (o_addr == DATA_LENGTH - 401)?FINISH:CHECK_LOC;
+                next_state = (o_addr == DATA_LENGTH - 401 /*倒數第二排最右邊座標*/)?FINISH:CHECK_LOC;
             FINISH:
                 next_state = FINISH;
             default:
@@ -94,34 +94,34 @@ module image_processor#(
     /* Processing */
     // w_addr
     always @(posedge clk_p or posedge rst) begin
-    if(rst)
-        w_addr <= 0;
-    else if(next_state == READ_GRAY || current_state == READ_GRAY)
-        w_addr <= w_addr +1;
-    else if(current_state == GET_TWO) begin
-        case (count_neighbor)
-            3'd0:
-                w_addr <= location - 400;
-            3'd1:
-                w_addr <= location + 400;
-        endcase
-    end
-    else if(current_state == GET_SIX) begin
-        case (count_neighbor)
-            3'd0:
-                w_addr <= location - 401;
-            3'd1:
-                w_addr <= location + 401;
-            3'd2:
-                w_addr <= location - 400;
-            3'd3:
-                w_addr <= location + 400;
-            3'd4:
-                w_addr <= location - 399;
-            3'd5:
-                w_addr <= location + 399;
-        endcase
-    end
+        if(rst)
+            w_addr <= 0;
+        else if(next_state == READ_GRAY || current_state == READ_GRAY)
+            w_addr <= w_addr +1;
+        else if(current_state == GET_TWO) begin
+            case (count_neighbor)
+                3'd0:
+                    w_addr <= location - 400;//b
+                3'd1:
+                    w_addr <= location + 400;//e
+            endcase
+        end
+        else if(current_state == GET_SIX) begin
+            case (count_neighbor)
+                3'd0:
+                    w_addr <= location - 401;//a
+                3'd1:
+                    w_addr <= location + 401;//f
+                3'd2:
+                    w_addr <= location - 400;//b
+                3'd3:
+                    w_addr <= location + 400;//e
+                3'd4:
+                    w_addr <= location - 399;//c
+                3'd5:
+                    w_addr <= location + 399;//d
+            endcase
+        end
     end
 
     // o_addr
