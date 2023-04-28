@@ -30,8 +30,24 @@ module image_processor#(
     reg [9:0] ready_count;
     reg ready;
 
+    reg [2:0] current_state;
+    reg [2:0] next_state;
+    parameter INIT = 0;
+    parameter READ_GRAY = 1;
+    parameter CHECK_LOC = 2;
+    parameter GET_TWO = 3;
+    parameter GET_SIX = 4;
+    parameter WRITE_RES = 5;
+    parameter FINISH = 6;
+
+    reg [9:0] counter;
+    reg [ADDR_WIDTH-1:0] location;
+    reg [2:0] count_neighbor;
+    reg [3:0] d1, d2, d3;
+    reg [4:0] sum1, sum2, sum3;
+
     /* Init System */
-    always@(posedge clk_p or posedge rst)begin
+    always@(posedge clk_p)begin
         if (rst) begin
            ready_count <= 0;
            ready <= 0;
@@ -45,24 +61,10 @@ module image_processor#(
           end
         end
     end
-    reg [3:0] current_state;
-    reg [3:0] next_state;
-    parameter INIT = 0;
-    parameter READ_GRAY = 1;
-    parameter CHECK_LOC = 2;
-    parameter GET_TWO = 3;
-    parameter GET_SIX = 4;
-    parameter WRITE_RES = 5;
-    parameter FINISH = 6;
-
-    reg [9:0] counter;
-    reg [ADDR_WIDTH-1:0] location;
-    reg [2:0] count_neighbor;
-    reg [DATA_WIDTH-1:0] d1, d2, d3;
-    reg [DATA_WIDTH:0] sum1, sum2, sum3;
+    
 
     /* FSM */
-    always @(posedge clk_p or posedge rst) begin
+    always @(posedge clk_p) begin
         if (rst) 
             current_state <= INIT;
         else 
@@ -93,12 +95,12 @@ module image_processor#(
     
     /* Processing */
     // w_addr
-    always @(posedge clk_p or posedge rst) begin
+    always @(posedge clk_p) begin
         if(rst)
             w_addr <= 0;
         else if(next_state == READ_GRAY || current_state == READ_GRAY)
             w_addr <= w_addr +1;
-        else if(current_state == GET_TWO) begin
+        else if(next_state == GET_TWO) begin
             case (count_neighbor)
                 3'd0:
                     w_addr <= location - 400;//b
@@ -106,7 +108,7 @@ module image_processor#(
                     w_addr <= location + 400;//e
             endcase
         end
-        else if(current_state == GET_SIX) begin
+        else if(next_state == GET_SIX) begin
             case (count_neighbor)
                 3'd0:
                     w_addr <= location - 401;//a
@@ -125,7 +127,7 @@ module image_processor#(
     end
 
     // o_addr
-    always @(posedge clk_p or posedge rst) begin
+    always @(posedge clk_p) begin
     if(rst)
         o_addr <= 0;
     else if(current_state == READ_GRAY)
@@ -135,27 +137,27 @@ module image_processor#(
     end
 
     // data_out
-    always @(posedge clk_p or posedge rst) begin
+    always @(posedge clk_p) begin
     if(rst)
         data_out <= 0;
     else if(current_state == READ_GRAY)
         data_out <= data_in;
     else if(next_state == WRITE_RES)begin
         if(current_state == GET_TWO)
-            data_out <= sum1>>1;
+            data_out <= {sum1[3:0], sum1[3:0],sum1[3:0]} ;
         else begin
-            if(d2<=d1 && d2 <= d3)
-			    data_out <= sum2>>1;
+            if(d2 <= d1 && d2 <= d3)
+			    data_out <= {sum2[3:0], sum2[3:0],sum2[3:0]} ;
             else if(d1 <= d3)
-                data_out <= sum1>>1;
+                data_out <= {sum1[3:0], sum1[3:0],sum1[3:0]} ;
             else
-                data_out <= sum3>>1;
+                data_out <= {sum3[3:0], sum3[3:0],sum3[3:0]} ;
         end
     end
     end
 
     // counter
-    always @(posedge clk_p or posedge rst) begin
+    always @(posedge clk_p) begin
     if(rst)
         counter <= 0;
     else if(current_state == WRITE_RES && counter != 399)
@@ -165,17 +167,17 @@ module image_processor#(
     end
 
     // location
-    always @(posedge clk_p or posedge rst) begin
+    always @(posedge clk_p) begin
     if(rst)
         location <= 400;
     else if(current_state == WRITE_RES && counter != 399)
         location <= location +1;
     else if(current_state == WRITE_RES && counter == 399)
-        counter <= location + 401;
+        location <= location + 401;
     end
 
-    // d1, d2, d3
-    always @(posedge clk_p or posedge rst) begin
+    // d1, d2, d3, sum1, sum2, sum3
+    always @(posedge clk_p) begin
     if(rst)begin
         d1 <= 0;
         d2 <= 0;
@@ -186,33 +188,33 @@ module image_processor#(
     end
     else if(current_state == GET_TWO) begin
         if(count_neighbor == 1)
-		    sum1 <= data_in;
+		    sum1 <= data_in[3:0];
 	    else if(count_neighbor == 2)
-		    sum1 <= data_in + sum1;
+		    sum1 <= (data_in[3:0] + sum1)>>1;
     end
     else if(current_state == GET_SIX)
     begin
         case (count_neighbor)
             3'd1:
-                d1 <= data_in;
+                d1 <= data_in[3:0];
             3'd2:
             begin
-                sum1 <= d1 + data_in;
-                d1 <= (d1>=data_in)? d1-data_in:data_in-d1;
+                sum1 <= (d1 + data_in[3:0])>>1;
+                d1 <= (d1 >= data_in[3:0])? d1 - data_in[3:0] : data_in[3:0] - d1;
             end
             3'd3:
-                d2 <= data_in;
+                d2 <= data_in[3:0];
             3'd4:
             begin
-                sum2 <= d2 + data_in;
-                d2 <= (d2>=data_in)? d2-data_in:data_in-d2;
+                sum2 <= (d2 + data_in[3:0])>>1;
+                d2 <= (d2 >= data_in[3:0])? d2 - data_in[3:0] : data_in[3:0] - d2;
             end
             3'd5:
-                d3 <= data_in;
+                d3 <= data_in[3:0];
             3'd6:
             begin
-                sum3 <= d3 + data_in;
-                d3 <= (d3>=data_in)? d3-data_in:data_in-d3;
+                sum3 <= (d3 + data_in[3:0])>>1;
+                d3 <= (d3 >= data_in[3:0])? d3 - data_in[3:0] : data_in[3:0] - d3;
             end
         endcase
     end
