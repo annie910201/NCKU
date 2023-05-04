@@ -4,6 +4,10 @@
 ### 網路教學
 [[Compiler] 上課筆記目錄](https://aprilyang.home.blog/2021/04/23/compiler-note-outline/)
 
+[[COmpiler]目錄]](https://hackmd.io/@Zero871015/compiler)
+
+[编译原理之LL(1) 、LR(0)、SLR、LR(1)、LALR文法的对比](https://blog.csdn.net/zuzhiang/article/details/79047743)
+
 ### 單元介紹
 [Neso Academy(講得很好，可惜還在更新中)](https://www.youtube.com/@nesoacademy/videos)
 
