@@ -4,10 +4,10 @@
 
 ### 網路教學
 [[Compiler] 上課筆記目錄](https://aprilyang.home.blog/2021/04/23/compiler-note-outline/)
-- 需要有點基礎再去看，有很多證明跟延伸，
+- 需要有點基礎再去看，有很多證明跟延伸，但只有4章，到buttom-up那邊
 
 [[Compiler]目錄](https://hackmd.io/@Zero871015/compiler)
-- 解釋的很簡單仔細，適合菜鳥，但只有4章，到buttom-up那邊
+- 解釋的很簡單仔細，適合菜鳥，但也只有4章，到buttom-up那邊
 
 [编译原理之LL(1) 、LR(0)、SLR、LR(1)、LALR文法的对比](https://blog.csdn.net/zuzhiang/article/details/79047743)
 
