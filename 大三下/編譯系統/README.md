@@ -1,6 +1,7 @@
 ### 線上課程
 [台大教授_王允](http://cc.ee.ntu.edu.tw/~farn/courses/Compiler/2022.fall/)
 - 可以先看這個了解概念，但由於有些地方跟上課內容不同，所以搭配其他網路教學更好
+
 [Ghassan Shobaki Computer Science Lectures](https://www.youtube.com/playlist?list=PL6KMWPQP_DM97Hh0PYNgJord-sANFTI3i)
 
 ### 網路教學
