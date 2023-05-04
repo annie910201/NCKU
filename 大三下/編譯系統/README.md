@@ -1,6 +1,6 @@
 ### 線上課程
 [台大教授_王允](http://cc.ee.ntu.edu.tw/~farn/courses/Compiler/2022.fall/)
-- 可以先看這個了解概念，但由於有些地方跟上課內容不同，所以看其他網路教學更好
+- 可以先看這個了解概念，但由於有些地方跟上課內容不同，所以搭配其他網路教學更好
 
 ### 網路教學
 [[Compiler] 上課筆記目錄](https://aprilyang.home.blog/2021/04/23/compiler-note-outline/)
