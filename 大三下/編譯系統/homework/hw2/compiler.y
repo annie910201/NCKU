@@ -27,8 +27,31 @@
     static void lookup_symbol();
     static void dump_symbol();
 
+    struct table{
+        struct table *next;
+        int scope;
+        int symbol_number;
+    }
+    struct symbol{
+        int index;
+        char* name;
+        char* mut;
+        char* type;
+        int addr;
+        int lineno;
+        char* func_sig;
+        struct symbol *next;
+    }
+    struct symbol *head_symbol = NULL;
+    struct table *head_table = NULL;
     /* Global variables */
     bool HAS_ERROR = false;
+    int global_scope = -1;
+    int addr = 0;
+    char return_type = 'z';
+    
+    // int number_node = 0;
+
 %}
 
 %error-verbose
@@ -84,9 +107,34 @@ GlobalStatement
 ;
 
 FunctionDeclStmt
-    :
-;
+    : FUNC ID '(' ')' // ex: fn main() 
+    {
+        create_symbol();
+        printf("func: %s\n", $<s_val>2) /* fn main(), main is the string of 2  */
+        insert_symbol("func", $<s_val>2, "()V", 0)
+        printf("> Insert `%s` (addr: %d) to scope level %d\n", $<s_val>2, -1, 0);
+    }
+    FuncBlock // ex: fn foo(lhs: i32)
+    | FUNC ID '(' ParameterList ')'
+    {
+        create_symbol();
+        printf("func: %s\n", $<s_val>2) /* fn main(), main is the string of 2  */
+        char func_para[100] = "()";
 
+        // make new para
+        char tmp = toupper($<s_val>5[0]);// transfer to 大寫
+        strcat(func_para, &tmp);// why need to add &?
+
+        insert_symbol("func", $<s_val>2,func_para , 0)
+        printf("> Insert `%s` (addr: %d) to scope level %d\n", $<s_val>2, -1, 0);
+        return_type = (tmp);
+    }
+    FuncBlock
+;
+FuncBlock
+;
+ParameterList
+;
 %%
 
 /* C code section */
@@ -107,11 +155,15 @@ int main(int argc, char *argv[])
 }
 
 static void create_symbol() {
+    global_scope ++;
+    struct symbol *cur = malloc(sizeof(struct symbol));
+    cur -> index = 
+    cur -> 
     printf("> Create symbol table (scope level %d)\n", 0);
 }
 
-static void insert_symbol() {
-    printf("> Insert `%s` (addr: %d) to scope level %d\n", "XXX", 0, 0);
+static void insert_symbol(char* type, char* name, char* func_sig, int mark_var) {// if mark_var = 0, function; else if mark_var = 1, parameter
+    // printf("> Insert `%s` (addr: %d) to scope level %d\n", name, 0, 0);
 }
 
 static void lookup_symbol() {
