@@ -91,8 +91,8 @@ if(rst)
 	counter <= 0;
 else if(current_state == READ_GRAY || next_state == READ_GRAY)
 	counter <= counter +1;
-// else if(current_state == ADD_ROW)
-// 	counter <= 0;
+else if(current_state == ADD_ROW)
+	counter <= 0;
 else if(current_state == WRITE_RES)
 	counter <= counter +1;
 end
