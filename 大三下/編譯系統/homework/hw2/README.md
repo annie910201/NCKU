@@ -5,3 +5,5 @@ Referencr:
 [report](https://hackmd.io/@chungmin-yu/compiler_hw2)
 
 [2017_hw2](https://github.com/rapirent/compiler_hw2)
+
+[以lex/yacc實作算式計算機](https://good-ed.blogspot.com/2010/04/lexyacc.html)
