@@ -41,9 +41,9 @@ module image_processor#(
     parameter FINISH = 6;
 
     
-    reg [9:0] counter;
-    reg [18:0] y;
-    reg [18:0] x;
+    // reg [9:0] counter;
+    reg [8:0] y;
+    reg [8:0] x;
     // reg [ADDR_WIDTH-1:0] location;
     reg [2:0] count_neighbor;
     reg [3:0] d1, d2, d3;
@@ -51,7 +51,7 @@ module image_processor#(
     reg change;
     reg [1:0] cmd_use;
 
-    wire [10:0]up, down, right, left;
+    wire [8:0]up, down, right, left;
     assign up = y - 1;
     assign down = y + 1;
     assign left = x-1;
@@ -91,7 +91,7 @@ module image_processor#(
                 next_state =  (o_addr == DATA_LENGTH -1)?CHECK_LOC:READ_GRAY;
             CHECK_LOC:
                 if(cmd_use == 2'b00)// cmd == 0 => ELA圖
-                    next_state = (counter == 0 || counter == 399) ? GET_TWO : GET_SIX;
+                    next_state = (x == 0 || x == 399) ? GET_TWO : GET_SIX;
                 else if(cmd_use == 2'b01) // cmd == 1, 原圖
                     next_state = FINISH;
             GET_SIX:
@@ -133,9 +133,9 @@ module image_processor#(
         else if(next_state == GET_TWO) begin
             case (count_neighbor)
                 3'd0:
-                    w_addr <= up * 400 + left;//b
+                    w_addr <= up * 400 + x;//b
                 3'd1:
-                    w_addr <= down * 400 + right;//e
+                    w_addr <= down * 400 + x;//e
             endcase
         end
         else if(next_state == GET_SIX) begin
@@ -206,7 +206,7 @@ module image_processor#(
         y <= 1;
     else if(current_state == WRITE_RES)
     begin
-        if(x == 5'd31)
+        if(x == 19'd399)
             y <= y +2;
     end
     end
@@ -218,18 +218,24 @@ module image_processor#(
     else if(current_state == READ_GRAY && next_state == CHECK_LOC)
         x <= 0;
     else if(current_state == WRITE_RES)
-        x <= x +1;
+    begin
+        if(x == 19'd399)
+            x <= 0;
+        else
+            x <= x +1;
+    end
+        
     end
 
     // counter
-    always @(posedge clk_p) begin
-    if(rst)
-        counter <= 0;
-    else if(current_state == WRITE_RES && counter != 399)
-        counter <= counter+1;
-    else if(current_state == WRITE_RES && counter == 399)
-        counter <= 0;
-    end
+    // always @(posedge clk_p) begin
+    // if(rst)
+    //     counter <= 0;
+    // else if(current_state == WRITE_RES && counter != 399)
+    //     counter <= counter+1;
+    // else if(current_state == WRITE_RES && counter == 399)
+    //     counter <= 0;
+    // end
 
     // count_neighbor
     always @(posedge clk_p) begin
