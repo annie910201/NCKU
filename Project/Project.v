@@ -35,12 +35,14 @@ module image_processor#(
     parameter INIT = 0;
     parameter READ_GRAY = 1;
     parameter CHECK_LOC = 2;
-    parameter GET_TWO = 3;
-    parameter GET_SIX = 4;
-    parameter WRITE_RES = 5;
-    parameter FINISH = 6;
+    parameter ADD_ROW = 3;
+    parameter GET_TWO = 4;
+    parameter GET_SIX = 5;
+    parameter WRITE_RES = 6;
+    parameter FINISH = 7;
 
-    reg [9:0] counter;
+    reg [8:0] counter;
+    reg [8:0] count_row;
     reg [ADDR_WIDTH-1:0] location;
     reg [2:0] count_neighbor;
     reg [3:0] d1, d2, d3;
@@ -48,6 +50,12 @@ module image_processor#(
     reg change;
     reg [1:0] cmd_use;
 
+    wire [8:0]up, down, right, left, center;
+    assign up = (count_row<<1);
+    assign down = (count_row<<1) + 5'd2;
+    assign left = counter-1;
+    assign right = counter+1;
+    assign center = (count_row<<1) + 5'd1;
     /* Init System */
     always@(posedge clk_p)begin
         if (rst) begin
@@ -80,6 +88,8 @@ module image_processor#(
                 next_state = (ready)?READ_GRAY:INIT;
             READ_GRAY:
                 next_state =  (o_addr == DATA_LENGTH -1)?CHECK_LOC:READ_GRAY;
+            ADD_ROW:
+		        next_state = (count_row == 9'd300)?CHECK_LOC:READ_GRAY;
             CHECK_LOC:
                 if(cmd_use == 2'b00)// cmd == 0 => ELA圖
                     next_state = (counter == 0 || counter == 399) ? GET_TWO : GET_SIX;
@@ -124,25 +134,25 @@ module image_processor#(
         else if(next_state == GET_TWO) begin
             case (count_neighbor)
                 3'd0:
-                    w_addr <= location - 400;//b
+                    w_addr <= up * 400 + counter;//b
                 3'd1:
-                    w_addr <= location + 400;//e
+                    w_addr <= down * 400 + counter;//e
             endcase
         end
         else if(next_state == GET_SIX) begin
             case (count_neighbor)
                 3'd0:
-                    w_addr <= location - 401;//a
+                    w_addr <= up * 400 + left;//a
                 3'd1:
-                    w_addr <= location + 401;//f
+                    w_addr <= down * 400 + right;//f
                 3'd2:
-                    w_addr <= location - 400;//b
+                    w_addr <= up * 400 + counter;//b
                 3'd3:
-                    w_addr <= location + 400;//e
+                    w_addr <= down * 400 + counter;//e
                 3'd4:
-                    w_addr <= location - 399;//c
+                    w_addr <= up * 400 + right;//c
                 3'd5:
-                    w_addr <= location + 399;//d
+                    w_addr <= down * 400 + left;//d
             endcase
         end
     end
@@ -154,7 +164,7 @@ module image_processor#(
     else if(current_state == READ_GRAY)
         o_addr <= o_addr + 1;
     else if(next_state == WRITE_RES)
-        o_addr <= location;
+        o_addr <= center * 400 + counter;
     end
 
     // output_valid
@@ -189,14 +199,31 @@ module image_processor#(
     end
     end
 
+    //count_row
+    always @(posedge clk_p) begin
+    if(rst)
+        count_row <= 0;
+    else if(current_state == ADD_ROW && next_state == CHECK_LOC)
+        count_row <= 0;
+    else if(current_state == ADD_ROW)
+        count_row <= count_row + 1;
+    else if(current_state == WRITE_RES)
+    begin
+        if(counter == 9'd399)
+            count_row <= count_row +1;
+    end
+    end
+
     // counter
     always @(posedge clk_p) begin
     if(rst)
         counter <= 0;
-    else if(current_state == WRITE_RES && counter != 399)
-        counter <= counter+1;
-    else if(current_state == WRITE_RES && counter == 399)
+    else if(next_state == READ_GRAY)
+	    counter <= counter +1;
+    else if((current_state == GET_TWO || current_state == GET_SIX) && next_state == WRITE_RES)
         counter <= 0;
+    else if(current_state == WRITE_RES)
+        counter <= counter +1;
     end
 
     // count_neighbor
@@ -210,14 +237,14 @@ module image_processor#(
     end
 
     // location
-    always @(posedge clk_p) begin
-    if(rst)
-        location <= 400;
-    else if(current_state == WRITE_RES && counter != 399)
-        location <= location +1;
-    else if(current_state == WRITE_RES && counter == 399)
-        location <= location + 401;
-    end
+    // always @(posedge clk_p) begin
+    // if(rst)
+    //     location <= 400;
+    // else if(current_state == WRITE_RES && counter != 399)
+    //     location <= location +1;
+    // else if(current_state == WRITE_RES && counter == 399)
+    //     location <= location + 401;
+    // end
 
     // d1, d2, d3, sum1, sum2, sum3
     always @(posedge clk_p) begin
