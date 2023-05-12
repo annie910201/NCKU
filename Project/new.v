@@ -42,8 +42,8 @@ module image_processor#(
 
     
     // reg [9:0] counter;
-    reg [8:0] y;
-    reg [8:0] x;
+    reg [18:0] y;
+    reg [18:0] x;
     // reg [ADDR_WIDTH-1:0] location;
     reg [2:0] count_neighbor;
     reg [3:0] d1, d2, d3;
@@ -51,7 +51,7 @@ module image_processor#(
     reg change;
     reg [1:0] cmd_use;
 
-    wire [8:0]up, down, right, left;
+    wire [10:0]up, down, right, left;
     assign up = y - 1;
     assign down = y + 1;
     assign left = x-1;
