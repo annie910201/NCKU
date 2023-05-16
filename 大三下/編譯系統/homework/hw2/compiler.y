@@ -28,7 +28,8 @@
     static void dump_symbol();
 
     struct table{
-        struct table *next;
+        struct table *prev;
+        struct symbol *head;
         int scope;
         int symbol_number;
     }
@@ -42,8 +43,7 @@
         char* func_sig;
         struct symbol *next;
     }
-    struct symbol *head_symbol = NULL;
-    struct table *head_table = NULL;
+    struct table *current_table = NULL;
     /* Global variables */
     bool HAS_ERROR = false;
     int global_scope = -1;
@@ -131,7 +131,186 @@ FunctionDeclStmt
     }
     FuncBlock
 ;
-FuncBlock
+FuncBlock 
+    : '{' NEWLINE StatementList '}' // no return 
+    {
+        dump_symbol();
+    }
+    | '{' NEWLINE StatementList RETURN Expression ';' NEWLINE '}' // has return and return a value, ex: return 0;
+    {
+        if(return_type != 'z'){
+            printf("%creturn\n", return_type);
+                return_type = 'z';
+        }
+        dump_symbol();
+    }
+    // | '{' NEWLINE StatementList RETURN ';' NEWLINE '}'  // has return but return no value, ex: return;
+    // {
+
+    // }
+;
+StatementList
+    : Statement StatementList 
+    | Statement 
+;
+Statement
+    : DeclarationStmt NEWLINE
+    | SimpleStmt NEWLINE
+    | Block NEWLINE
+    | PrintStmt NEWLINE
+    | IFStmt NEWLINE
+    | WHILEStmt NEWLINE
+    | FORStmt NEWLINE
+    | NEWLINE
+DeclarationStmt
+    : LET IDType ':' TYPE '=' Expression
+    {
+        insert_symbol($<s_val>4, ID,"-", 2);
+    }
+IDType
+    : ID
+    | MUT ID
+TYPE    
+    : INT		{ $$ = "i32"; }
+	| FLOAT		{ $$ = "f32"; }
+	| STR	    { $$ = "str"; }
+	| BOOL		{ $$ = "bool"; }
+;
+Expression
+    : LogicalORExpr
+;
+LogicalORExpr
+    : LogicalANDExpr LOR LogicalANDExpr
+    {
+        if((strcmp($<s_val>1, "i32") == 0) || (strcmp($<s_val>3, "i32") == 0))
+            printf("error:%d: invalid operation: (operator LOR not defined on int32)\n", yylineno);
+        printf("LOR\n");
+        $$ = "bool"
+    }
+    | LogicalANDExpr {$$ = $1;}
+;
+LogicalANDExpr
+    : ComparisonExpr LAND ComparisonExpr
+    {
+        if((strcmp($<s_val>1, "i32") == 0)||(strcmp($<s_val>3, "i32") == 0)){
+            printf("error:%d: invalid operation: (operator LAND not defined on int32)\n", yylineno);
+        }
+        $$ = "bool"; 
+        printf("LAND\n");
+    }
+    | ComparisonExpr {$$ = $1;}
+;
+ComparisonExpr
+    : AdditionExpr cmp_op AdditionExpr
+    {
+        if(strcmp($<s_val>1, $<s_val>3) != 0){
+            printf("error:%d: invalid operation: %s (mismatched types %s and %s)\n", yylineno, $<s_val>2, $<s_val>1, $<s_val>3);
+        }
+        $$ = "bool";
+        printf("%s\n", $<s_val>2);
+    }
+    | AdditionExpr {$$ = $1;}
+;
+
+AdditionExpr
+    : MultiplicationExpr add_op MultiplicationExpr
+    {
+        if(strcmp($<s_val>1, $<s_val>3) != 0){
+            printf("error:%d: invalid operation: %s (mismatched types %s and %s)\n", yylineno, $<s_val>2, $<s_val>1, $<s_val>3);
+        }
+        $$ = $1;
+        printf("%s\n", $<s_val>2);
+    }
+    | AdditionExpr add_op MultiplicationExpr
+    {$$ = $1;
+    printf("%s\n", $<s_val>2);
+    }
+    | MultiplicationExpr {$$ = $1;}
+;
+
+MultiplicationExpr
+    : UnaryExpr mul_op UnaryExpr
+    {
+        if((strcmp($<s_val>2, "REM") == 0)&&(strcmp($<s_val>3, "f32") == 0)){
+            printf("error:%d: invalid operation: (operator REM not defined on f32)\n", yylineno);
+        }
+        $$ = $1;
+        printf("%s\n", $<s_val>2);
+    }
+    | UnaryExpr {$$ = $1;}
+;
+
+UnaryExpr
+    : unary_op UnaryExpr 
+    { 
+        $$ = $2; 
+        printf("%s\n", $<s_val>1);
+    }
+    | PrimaryExpr { $$ = $1; }
+;
+PrimaryExpr 
+    : Operand { $$ = $1; }
+    | ConversionExpr
+;
+Operand 
+    : Literal { $$ = $1; }
+    | ID { $$ = lookup_symbol($<s_val>1, false); } 
+    | ID '(' ')' { lookup_symbol($<s_val>1, true);} 
+    | ID '(' FuncPara ')' { lookup_symbol($<s_val>1, true);} 
+    | '(' Expression ')' { $$ = $2; }
+;
+Literal
+    : INT_LIT
+        {$$ = "i32"; 
+        printf("INT_LIT %d\n", $<i_val>1); 
+        }
+    | FLOAT_LIT
+        {$$ = "f32"; 
+        printf("FLOAT_LIT %f\n", $<f_val>1); 
+        }
+    | TRUE 
+        {$$ = "bool"; 
+        printf("TRUE\n");
+        }
+    | FALSE 
+        {$$ = "bool"; 
+        printf("FALSE\n");
+        }
+    | '"' STR '"'
+        {$$ = "string"; 
+        printf("STRING_LIT %s\n", $<s_val>2); 
+        }
+;
+ConversionExpr 
+    : Type '(' Expression ')' 
+    {
+        printf("%c2%c\n", $<s_val>3[0], $<s_val>1[0]);
+    }
+;
+cmp_op 
+    : EQL { $$ = "EQL"; }
+    | NEQ { $$ = "NEQ"; }
+    | '<' { $$ = "LES"; }
+    | LEQ { $$ = "LEQ"; }
+    | '>' { $$ = "GTR"; }
+    | GEQ { $$ = "GEQ"; }
+;
+
+add_op 
+    : '+' { $$ = "ADD"; }
+    | '-' { $$ = "SUB"; }
+;
+
+mul_op 
+    : '*' { $$ = "MUL"; }
+    | '/' { $$ = "QUO"; }
+    | '%' { $$ = "REM"; }
+;
+
+unary_op 
+    : '+' { $$ = "POS"; }
+    | '-' { $$ = "NEG"; }
+    | '!' { $$ = "NOT"; }
 ;
 ParameterList
 ;
@@ -156,23 +335,121 @@ int main(int argc, char *argv[])
 
 static void create_symbol() {
     global_scope ++;
-    struct symbol *cur = malloc(sizeof(struct symbol));
-    cur -> index = 
-    cur -> 
-    printf("> Create symbol table (scope level %d)\n", 0);
+    struct table *tmp = malloc(sizeof(struct symbol));
+    tmp -> prev = cur_table;
+    tmp -> scope = global_scope;
+    tmp -> symbol_number = 0;
+    tmp -> head = NULL;
+    current_table = tmp;
+    printf("> Create symbol table (scope level %d)\n", global_scope);
 }
 
-static void insert_symbol(char* type, char* name, char* func_sig, int mark_var) {// if mark_var = 0, function; else if mark_var = 1, parameter
-    // printf("> Insert `%s` (addr: %d) to scope level %d\n", name, 0, 0);
+static void insert_symbol(char* type, char* name, char* func_sig, int mark_var) {// if mark_var = 0, function; else if mark_var = 1, parameter, else is 2
+    struct symbol *tail = NULL;
+    struct table *first = current_table;
+    bool empty = false;
+    if(mark_var == 0){ // function
+        while(first-> prev != NULL) // is not the head of table
+            first = first -> prev;
+        /* after find the head of table */
+        if(first -> head != NULL){ // not empty -> add to tail
+            tail = first -> head;
+            while(tail -> next != NULL)
+                tail = tail->next;
+        }
+        else // empty
+            empty = true;
+    }
+    else{
+        if(first -> head != NULL){
+            tail = current_table -> head;
+            while(tail -> next !=NULL){
+                tail = tail->next;
+            }
+        }
+        else
+            empty = true;
+    }
+    /* to this point, first and tail is moved to the right position */
+        /* function: first -> head of table, tail -> the tail of first */
+        /* parameter: first -> current of table, tail -> the tail of first */
+    struct symbol *new = malloc(sizeof(struct symbol));
+    // next
+    new -> next = NULL;
+    // name
+    new -> name = strdup(name);// 和strcpy不太一樣，可以直接把要複製的內容給未經過初始化或分配空間的指標，相當於strlen + 分配空間 + strcpy  
+    // mut
+    // type
+    new -> type = strdup(type);
+    // addr and lineno 
+    if(mark_var == 0){// function
+        new -> lineno = yylineno + 1;
+        new -> addr = -1;
+    }
+    else if(mark_var == 1){// parameter
+        new -> lineno = yylineno + 1;
+        new -> addr = addr;
+        addr ++;
+    }
+    else {
+        new -> lineno = yylineno ;
+        new -> addr = addr;
+        addr ++;
+    }
+    // func_sig
+    new -> func_sig = strdup(func_sig);
+    // index
+    if(!empty){
+        new -> index = (tail -> index) + 1;
+        tail -> next = new;
+    }
+    else{
+        new -> index = 0;
+        first -> head = new;
+    }
+    // print
+    if(mark_var !=0)// not function
+        printf("> Insert `%s` (addr: %d) to scope level %d\n", name, new -> addr, global_scope);
 }
 
-static void lookup_symbol() {
+static char *lookup_symbol(char *name, int mark_var) {
+    struct table *t = current_table;
+    struct symbol *s = NULL;
+    while(t!=NULL){
+        s = t -> head;
+        while(s!= NULL){
+            if(strcmp(s-> name, name) == 0){
+                if(mark_var == 0){// function
+                    printf("call: %s%s\n", s -> name, s -> func_sig);
+                    return s_pointer -> func_sig;
+                }
+                else{// not function
+                    printf("IDENT (name=%s, address=%d)\n", s->name, s->addr);
+                    return s-> type;
+                }
+            }
+            else// name is not same
+                s = s->next;
+        }
+        t = t-> prev;
+    }
+    /* if it's not return until this step, it is represent the symbol is an error */
+    printf("error:%d: undefined: %s\n", yylineno+1, name);
+    return "ERROR";
 }
 
 static void dump_symbol() {
-    printf("\n> Dump symbol table (scope level: %d)\n", 0);
+    printf("\n> Dump symbol table (scope level: %d)\n", current_table -> scope);
     printf("%-10s%-10s%-10s%-10s%-10s%-10s%-10s\n",
         "Index", "Name", "Mut","Type", "Addr", "Lineno", "Func_sig");
-    printf("%-10d%-10s%-10d%-10s%-10d%-10d%-10s\n",
-            0, "name", 0, "type", 0, 0, "func_sig");
+    
+    struct symbol *tmp = current_table-> head;
+    while(tmp!= NULL){
+        printf("%-10d%-10s%-10d%-10s%-10d%-10d%-10s\n",
+            tmp-> index, tmp-> name, tmp-> mut, tmp-> type, tmp-> addr, tmp-> lineno, tmp-> func_sig);
+        tmp = tmp->next;
+    }
+    printf("\n");
+    current_table = current_table-> prev;
+    global_scope--;
 }
