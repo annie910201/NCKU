@@ -144,10 +144,6 @@ FuncBlock
         }
         dump_symbol();
     }
-    // | '{' NEWLINE StatementList RETURN ';' NEWLINE '}'  // has return but return no value, ex: return;
-    // {
-
-    // }
 ;
 StatementList
     : Statement StatementList 

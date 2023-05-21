@@ -66,6 +66,7 @@ fnumber ({digit}*\.{digit}+)
 "|"         { return '|'; }
 '~'         { return '~'; }
 "("         { return '('; }
+"\n"        { return NEWLINE; } /* I add */
 ")"         { return ')'; }
 "["         { return '['; }
 "]"         { return ']'; }
@@ -101,7 +102,9 @@ fnumber ({digit}*\.{digit}+)
 {fnumber}   { yylval.f_val = atof(yytext);
                 return FLOAT_LIT;
             }
-{id}        { yylval.s_val = strdup(yytext); return ID;}
+{id}        { yylval.s_val = strdup(yytext); 
+                return ID;
+            }
 <<EOF>>     { static int once = 0;
                 if (once++) {
                     yyterminate();
