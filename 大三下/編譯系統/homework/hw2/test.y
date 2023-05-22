@@ -161,9 +161,9 @@ Statement
     | DeclarationStmt ';' NEWLINE
     | ExpressionStmt
     | AssignmentStmt ';' NEWLINE
-    | IFStmt ';' NEWLINE
+    | IFStmt NEWLINE
     | PrintStmt ';' NEWLINE
-    | WhileStmt ';' NEWLINE
+    | WhileStmt NEWLINE
     | ForStmt ';' NEWLINE
     | NEWLINE
 ;
@@ -182,15 +182,16 @@ DeclarationStmt
     | LET MUT ID ':' Type { insert_symbol($<s_val>5, $<s_val>3, "-", 2, true ); }
     | LET ID ':' Type '=' ExpressionStmt { insert_symbol($<s_val>4, $<s_val>2, "-", 2, false ); }
     | LET MUT ID ':' Type '=' ExpressionStmt { insert_symbol($<s_val>5, $<s_val>3, "-", 2, true ); }
-    | LET ID ':' DeclareArrayStmt '=' ExpressionStmt { insert_symbol("array", $<s_val>2, "-", 2, false ); }
-    | LET MUT ID ':' DeclareArrayStmt '=' ExpressionStmt { insert_symbol("array", $<s_val>3, "-", 2, true ); }
+    // | LET ID ':' DeclareArrayStmt '=' ExpressionStmt { insert_symbol("array", $<s_val>2, "-", 2, false ); }
+    // | LET MUT ID ':' DeclareArrayStmt '=' ExpressionStmt { insert_symbol("array", $<s_val>3, "-", 2, true ); }
+    | LET MUT ID '=' ExpressionStmt { insert_symbol("i32", $<s_val>3, "-", 2, true ); }
 ;
 AssignmentStmt
     : ID assign_op ExpressionStmt { printf("%s\n", $<s_val>2); }
 ;
 IFStmt
-    : IF ExpressionStmt Block
-    | IF ExpressionStmt Block ELSE Block
+    : IF ExpressionStmt Block NEWLINE
+    | IF ExpressionStmt Block NEWLINE ELSE Block
 ;
 PrintStmt
     : PRINT '(' NEWLINE ExpressionStmt NEWLINE')' {printf("PRINT %s\n", $<s_val>4);}
@@ -199,7 +200,7 @@ PrintStmt
 ;
 
 WhileStmt
-    : WHILE ExpressionStmt '{' NEWLINE StatementList '}'
+    : WHILE ExpressionStmt Block
 ;
 ForStmt
     : FOR ID IN ExpressionStmt '{' NEWLINE StatementList '}'
@@ -287,7 +288,7 @@ assign_op
 cmp_op 
     : EQL { $$ = "EQL"; }
     | NEQ { $$ = "NEQ"; }
-    | '<' { $$ = "LES"; }
+    | '<' { $$ = "LSS"; }
     | LEQ { $$ = "LEQ"; }
     | '>' { $$ = "GTR"; }
     | GEQ { $$ = "GEQ"; }
