@@ -117,16 +117,22 @@ FunctionDeclStmt
     }
     FuncBlock
     | FuncOpen
-    '(' ParameterList ')' ARROW Type 
+    '(' 
     {
-        strcat(func_para, ")");
-        build_func_para($<s_val>6);
         insert_symbol("func", $<s_val>2, func_para, 0, false);
         printf("> Insert `%s` (addr: -1) to scope level %d\n", $<s_val>2, 0);
-        strcpy(func_para, "(");
-        return_type = ($<s_val>5[0]);
+        create_symbol();
+        // strcat(func_para, ")");
+        // build_func_para($<s_val>6);
+        // strcpy(func_para, "(");
+        // return_type = ($<s_val>5[0]);
     }
-    FuncBlock
+    ParameterList ')' ARROW Type FuncBlock
+    {
+        if(strcmp($<s_val>4, "bool") == 0){
+            return_type = 'b';
+        }
+    }
 ;
 FuncOpen
     : FUNC ID 
@@ -137,20 +143,22 @@ FuncOpen
 ;
 
 ParameterList
-    : ParameterList ',' ID ':' Type
+    :  ParameterList  ',' ID ':' Type
     {
-        insert_symbol($<s_val>4, $<s_val>2, "-", 1, false);
+        insert_symbol($<s_val>5, $<s_val>3, "-", 1, false);
+        printf("> Insert `%s` (addr: %d) to scope level %d\n", $<s_val>3, addr-1, global_scope);
         // build_func_para($<s_val>)
     }
     | ID ':' Type
     {
         insert_symbol($<s_val>3, $<s_val>1, "-", 1, false);
+        printf("> Insert `%s` (addr: %d) to scope level %d\n", $<s_val>1, addr-1, global_scope);
         // build_func_para($<s_val>)
     }
 ;
 FuncBlock
     : '{' NEWLINE StatementList '}' { dump_symbol(); }
-    | '{' NEWLINE StatementList RETURN ExpressionStmt NEWLINE'}' { dump_symbol(); }
+    // | '{' NEWLINE RETURN ExpressionStmt ';' NEWLINE'}' { dump_symbol(); }
 ;
 StatementList
     : Statement
@@ -176,6 +184,15 @@ Block
     {
         dump_symbol();
     }
+    | '{' 
+    {
+        create_symbol();
+    }
+    NEWLINE '\t' RETURN ExpressionStmt ';' NEWLINE '}'
+    {
+        printf("%creturn\n", return_type);
+        dump_symbol();
+    }
 ;
 DeclarationStmt
     : LET ID ':' Type { insert_symbol($<s_val>4, $<s_val>2, "-", 2, false ); }
@@ -191,6 +208,7 @@ AssignmentStmt
 ;
 IFStmt
     : IF ExpressionStmt Block NEWLINE
+    // | IF ExpressionStmt Block RETURN ExpressionStmt ';' NEWLINE '}'
     | IF ExpressionStmt Block NEWLINE ELSE Block
 ;
 PrintStmt
@@ -419,7 +437,7 @@ static void insert_symbol(char* type, char* name, char* func_sig, int mark_var, 
         first -> head = new;
     }
     // print
-    if(mark_var !=0)// not function
+    if(mark_var ==2)// id
         printf("> Insert `%s` (addr: %d) to scope level %d\n", name, new -> addr, global_scope);
 }
 
