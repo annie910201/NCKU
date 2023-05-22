@@ -157,9 +157,9 @@ StatementList
     | Statement StatementList // statement越上面先做
 ;
 Statement
-    : Block ';' NEWLINE // multi-statement
+    : Block NEWLINE // multi-statement
     | DeclarationStmt ';'NEWLINE
-    | ExpressionStmt ';' NEWLINE
+    | ExpressionStmt
     | AssignmentStmt ';' NEWLINE
     | IFStmt ';' NEWLINE
     | PrintStmt ';' NEWLINE
@@ -184,16 +184,18 @@ DeclarationStmt
     | LET MUT ID ':' DeclareArrayStmt '=' ExpressionStmt { insert_symbol("array", $<s_val>3, "-", 2, true ); }
 ;
 AssignmentStmt
-    : ExpressionStmt assign_op ExpressionStmt { printf("%s\n", $<s_val>2); }
+    : ID assign_op ExpressionStmt { printf("%s\n", $<s_val>2); }
 ;
 IFStmt
     : IF ExpressionStmt Block
     | IF ExpressionStmt Block ELSE Block
 ;
 PrintStmt
-    : PRINT '(' ExpressionStmt ')' {printf("PRINT %s\n", $<s_val>3);}
+    : PRINT '(' NEWLINE ExpressionStmt NEWLINE')' {printf("PRINT %s\n", $<s_val>4);}
+    | PRINT '('  ExpressionStmt ')' {printf("PRINT %s\n", $<s_val>3);}
     | PRINTLN '(' ExpressionStmt ')'  {printf("PRINTLN %s\n", $<s_val>3);}
 ;
+
 WhileStmt
     : WHILE ExpressionStmt '{' NEWLINE StatementList '}'
 ;
@@ -266,17 +268,17 @@ Literal
     : INT_LIT { $$ = "i32"; printf("INT_LIT %d\n", $<i_val>1);}
     | FLOAT_LIT { $$ = "f32"; printf("FLOAT_LIT %f\n", $<f_val>1);}
     | '"' STRING_LIT '"' { $$ = "str"; printf("STRING_LIT \"%s\"\n", $<s_val>2);}
-    | TRUE { $$ = "bool"; printf("FALSE 0\n");}
-    | FALSE { $$ = "bool"; printf("TRUE 1\n");}
+    | TRUE { $$ = "bool"; printf("bool TRUE\n");}
+    | FALSE { $$ = "bool"; printf("bool FALSE\n");}
 ;
 
 assign_op
     : '=' {$$ = "ASSIGN";}
-    | ADD_ASSIGN {$$ = "ADD";}
-    | SUB_ASSIGN {$$ = "SUB";}
-    | MUL_ASSIGN {$$ = "MUL";}
-    | DIV_ASSIGN {$$ = "DIV";}
-    | REM_ASSIGN {$$ = "REM";}
+    | ADD_ASSIGN {$$ = "ADD_ASSIGN";}
+    | SUB_ASSIGN {$$ = "SUB_ASSIGN";}
+    | MUL_ASSIGN {$$ = "MUL_ASSIGN";}
+    | DIV_ASSIGN {$$ = "DIV_ASSIGN";}
+    | REM_ASSIGN {$$ = "REM_ASSIGN";}
 ;
 
 cmp_op 
@@ -307,7 +309,7 @@ unary_op
 Type 
     : INT		{ $$ = "i32"; }
 	| FLOAT		{ $$ = "f32"; }
-	| STR	    { $$ = "str"; }
+	| '&'STR	    { $$ = "str"; }
 	| BOOL		{ $$ = "bool"; }
 ;
 
@@ -424,10 +426,8 @@ static char *lookup_symbol(char *name, int mark_var) {
         s = t -> head;
         while(s!= NULL){
             if(strcmp(s-> name, name) == 0){
-                if(mark_var == 0){// function
-                    // printf("call: %s%s\n", s -> name, s -> func_sig);
+                if(mark_var == 0)// function
                     return s -> func_sig;
-                }
                 else{// not function
                     printf("IDENT (name=%s, address=%d)\n", s->name, s->addr);
                     return s-> type;
