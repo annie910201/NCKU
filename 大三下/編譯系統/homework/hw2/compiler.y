@@ -49,6 +49,8 @@
     bool HAS_ERROR = false;
     int global_scope = -1;
     int addr = 0;
+    char func_para[100] = "(";
+    char return_type = 'z';
 %}
 
 %error-verbose
@@ -81,10 +83,11 @@
 %token <s_val> STRING_LIT
 
 /* Nonterminal with return, which need to sepcify type */
-%type <s_val> Type
+%type <s_val> Type Literal cmp_op add_op mul_op unary_op assign_op 
+%type <s_val> ExpressionStmt LogicalORExpr LogicalANDExpr ComparisonExpr AdditionExpr MultiplicationExpr UnaryExpr Operand
 
 /* Yacc will start at this nonterminal */
-%start Program
+%start Program 
 
 /* Grammar section */
 %%
@@ -104,16 +107,50 @@ GlobalStatement
 ;
 
 FunctionDeclStmt
-    : FUNC ID '(' ')' FuncBlock
-    : FUNC ID '(' ParameterList ')' ARROW Type FuncBlock
+    : FUNC ID 
+    {
+        printf("func: %s\n", $<s_val>2);
+        create_symbol();
+        $$ = $2;
+    }
+    '(' ')' 
+    {
+        insert_symbol("func", $<s_val>2, "()V", 0);
+        printf("> Insert `%s` (addr: -1) to scope level %d\n", $<s_val>2, 0);
+    }
+    FuncBlock
+    | FUNC ID
+    {
+        printf("func: %s\n", $<s_val>2);
+        create_symbol();
+        $$ = $2;
+    } 
+    '(' ParameterList ')' ARROW Type 
+    {
+        strcat(func_para, ")");
+        build_func_para($<s_val>5);
+        insert_symbol("func", $<s_val>2, func_para, 0);
+        printf("> Insert `%s` (addr: -1) to scope level %d\n", $<s_val>2, 0);
+        strcpy(func_para, "(");
+        return_type = ($<s_val>5[0]);
+    }
+    FuncBlock
 ;
 ParameterList
     : ParameterList ',' ID ':' Type
+    {
+        insert_symbol($<s_val>4, $<s_val>2, "-", 1);
+        // build_func_para($<s_val>)
+    }
     | ID ':' Type
+    {
+        insert_symbol($<s_val>6, $<s_val>4, "-", 1);
+        // build_func_para($<s_val>)
+    }
 ;
 FuncBlock
-    : '{' NEWLINE StatementList '}'
-    | '{' NEWLINE StatementList RETURN ExpressionStmt NEWLINE'}'
+    : '{' NEWLINE StatementList '}' { dump_symbol(); }
+    | '{' NEWLINE StatementList RETURN ExpressionStmt NEWLINE'}' { dump_symbol(); }
 ;
 StatementList
     : Statement
@@ -131,24 +168,31 @@ Statement
     | NEWLINE
 ;
 Block
-    : '{' NEWLINE StatementList '}'
+    : '{' 
+    {
+        create_symbol();
+    }
+    NEWLINE StatementList '}'
+    {
+        dump_symbol();
+    }
 ;
 DeclarationStmt
-    : LET ID ':' Type '=' ExpressionStmt
-    | LET MUT ID ':' Type '=' ExpressionStmt
-    | LET ID ':' DeclareArrayStmt '=' ExpressionStmt
-    | LET MUT ID ':' DeclareArrayStmt '=' ExpressionStmt
+    : LET ID ':' Type '=' ExpressionStmt { insert_symbol($<s_val>4, $<s_val>2, "-", 2 ) }
+    | LET MUT ID ':' Type '=' ExpressionStmt { insert_symbol($<s_val>5, $<s_val>3, "-", 2 ) }
+    | LET ID ':' DeclareArrayStmt '=' ExpressionStmt { insert_symbol("array", $<s_val>2, "-", 2 ) }
+    | LET MUT ID ':' DeclareArrayStmt '=' ExpressionStmt { insert_symbol("array", $<s_val>3, "-", 2 ) }
 ;
 AssignmentStmt
-    : ExpressionStmt assign_op ExpressionStmt
+    : ExpressionStmt assign_op ExpressionStmt { printf("%s\n", $<s_val>2); }
 ;
 IFStmt
     : IF ExpressionStmt Block
     | IF ExpressionStmt Block ELSE Block
 ;
 PrintStmt
-    : PRINT '(' ExpressionStmt ')' 
-    | PRINTLN '(' ExpressionStmt ')' 
+    : PRINT '(' ExpressionStmt ')' {printf("PRINT %s\n", $<s_val>3);}
+    | PRINTLN '(' ExpressionStmt ')'  {printf("PRINTLN %s\n", $<s_val>3);}
 ;
 WhileStmt
     : WHILE ExpressionStmt '{' NEWLINE StatementList '}'
@@ -161,15 +205,23 @@ DeclareArrayStmt
     | Type ';' ExpressionStmt
 ;
 ExpressionStmt
-    : LogicalORExpr
+    : LogicalORExpr {$$ = $1;}
 ;
 LogicalORExpr
     : LogicalANDExpr LOR LogicalANDExpr
-    | LogicalANDExpr
+    {
+        $$ = "bool";
+        printf("LOR\n");
+    }
+    | LogicalANDExpr { $$ = $1; }
 ;
 LogicalANDExpr
     : ComparisonExpr LAND ComparisonExpr
-    | ComparisonExpr
+    {
+        $$ = "bool"; 
+        printf("LAND\n");
+    }
+    | ComparisonExpr { $$ = $1; }
 ;
 ComparisonExpr
     : AdditionExpr cmp_op AdditionExpr
