@@ -265,7 +265,7 @@ Operand
 Literal
     : INT_LIT { $$ = "i32"; printf("INT_LIT %d\n", $<i_val>1);}
     | FLOAT_LIT { $$ = "f32"; printf("FLOAT_LIT %f\n", $<f_val>1);}
-    | '"' STRING_LIT '"' { $$ = "str"; printf("STRING_LIT %s\n", $<s_val>1);}
+    | '"' STRING_LIT '"' { $$ = "str"; printf("STRING_LIT \"%s\"\n", $<s_val>2);}
     | TRUE { $$ = "bool"; printf("FALSE 0\n");}
     | FALSE { $$ = "bool"; printf("TRUE 1\n");}
 ;
