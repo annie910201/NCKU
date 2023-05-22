@@ -133,7 +133,7 @@ FUNCOpen
     : FUNC IDENT 
     { printf("func: %s\n", $<s_val>2);
     create_symbol();
-    $$ = $2; 
+    $$ = $2;
     }
 ;
 
