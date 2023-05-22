@@ -158,7 +158,7 @@ StatementList
 ;
 Statement
     : Block NEWLINE // multi-statement
-    | DeclarationStmt ';'NEWLINE
+    | DeclarationStmt ';' NEWLINE
     | ExpressionStmt
     | AssignmentStmt ';' NEWLINE
     | IFStmt ';' NEWLINE
@@ -178,7 +178,9 @@ Block
     }
 ;
 DeclarationStmt
-    : LET ID ':' Type '=' ExpressionStmt { insert_symbol($<s_val>4, $<s_val>2, "-", 2, false ); }
+    : LET ID ':' Type { insert_symbol($<s_val>4, $<s_val>2, "-", 2, false ); }
+    | LET MUT ID ':' Type { insert_symbol($<s_val>5, $<s_val>3, "-", 2, true ); }
+    | LET ID ':' Type '=' ExpressionStmt { insert_symbol($<s_val>4, $<s_val>2, "-", 2, false ); }
     | LET MUT ID ':' Type '=' ExpressionStmt { insert_symbol($<s_val>5, $<s_val>3, "-", 2, true ); }
     | LET ID ':' DeclareArrayStmt '=' ExpressionStmt { insert_symbol("array", $<s_val>2, "-", 2, false ); }
     | LET MUT ID ':' DeclareArrayStmt '=' ExpressionStmt { insert_symbol("array", $<s_val>3, "-", 2, true ); }
@@ -268,6 +270,7 @@ Literal
     : INT_LIT { $$ = "i32"; printf("INT_LIT %d\n", $<i_val>1);}
     | FLOAT_LIT { $$ = "f32"; printf("FLOAT_LIT %f\n", $<f_val>1);}
     | '"' STRING_LIT '"' { $$ = "str"; printf("STRING_LIT \"%s\"\n", $<s_val>2);}
+    | '"''"' { $$ = "str"; printf("STRING_LIT \"\"\n");}
     | TRUE { $$ = "bool"; printf("bool TRUE\n");}
     | FALSE { $$ = "bool"; printf("bool FALSE\n");}
 ;
