@@ -2,7 +2,7 @@
 
 /* Definition section */
 %{
-    #include "compiler_hw_common.h" //Extern variables that communicate with lex
+    #include "compiler_common.h" //Extern variables that communicate with lex
     // #define YYDEBUG 1
     // int yydebug = 1;
 
@@ -23,26 +23,27 @@
     /* Symbol table function - you can add new functions if needed. */
     /* parameters and return type can be changed */
     static void create_symbol();
-    static void insert_symbol();
-    static void lookup_symbol();
+    static void insert_symbol(char*, char*, char*, int, bool);
+    static char *lookup_symbol(char*, int);
     static void dump_symbol();
+    static void build_func_para(char *);
 
     struct table{
         struct table *prev;
         struct symbol *head;
         int scope;
         int symbol_number;
-    }
+    };
     struct symbol{
         int index;
         char* name;
-        char* mut;
+        int mut;
         char* type;
         int addr;
         int lineno;
         char* func_sig;
         struct symbol *next;
-    }
+    };
     struct table *current_table = NULL;
 
     /* Global variables */
@@ -84,7 +85,7 @@
 
 /* Nonterminal with return, which need to sepcify type */
 %type <s_val> Type Literal cmp_op add_op mul_op unary_op assign_op 
-%type <s_val> ExpressionStmt LogicalORExpr LogicalANDExpr ComparisonExpr AdditionExpr MultiplicationExpr UnaryExpr Operand
+%type <s_val> FuncOpen ExpressionStmt LogicalORExpr LogicalANDExpr ComparisonExpr AdditionExpr MultiplicationExpr UnaryExpr Operand
 
 /* Yacc will start at this nonterminal */
 %start Program 
@@ -107,44 +108,43 @@ GlobalStatement
 ;
 
 FunctionDeclStmt
-    : FUNC ID 
-    {
-        printf("func: %s\n", $<s_val>2);
-        create_symbol();
-        $$ = $2;
-    }
+    : FuncOpen
     '(' ')' 
     {
-        insert_symbol("func", $<s_val>2, "()V", 0);
+        insert_symbol("func", $<s_val>2, "()V", 0, false);
         printf("> Insert `%s` (addr: -1) to scope level %d\n", $<s_val>2, 0);
     }
     FuncBlock
-    | FUNC ID
-    {
-        printf("func: %s\n", $<s_val>2);
-        create_symbol();
-        $$ = $2;
-    } 
+    | FuncOpen
     '(' ParameterList ')' ARROW Type 
     {
         strcat(func_para, ")");
-        build_func_para($<s_val>5);
-        insert_symbol("func", $<s_val>2, func_para, 0);
+        build_func_para($<s_val>6);
+        insert_symbol("func", $<s_val>2, func_para, 0, false);
         printf("> Insert `%s` (addr: -1) to scope level %d\n", $<s_val>2, 0);
         strcpy(func_para, "(");
         return_type = ($<s_val>5[0]);
     }
     FuncBlock
 ;
+FuncOpen
+    : FUNC ID 
+    {
+        printf("func: %s\n", $<s_val>2);
+        create_symbol();
+        $$ = $<s_val>2;
+    }
+;
+
 ParameterList
     : ParameterList ',' ID ':' Type
     {
-        insert_symbol($<s_val>4, $<s_val>2, "-", 1);
+        insert_symbol($<s_val>4, $<s_val>2, "-", 1, false);
         // build_func_para($<s_val>)
     }
     | ID ':' Type
     {
-        insert_symbol($<s_val>6, $<s_val>4, "-", 1);
+        insert_symbol($<s_val>3, $<s_val>1, "-", 1, false);
         // build_func_para($<s_val>)
     }
 ;
@@ -178,10 +178,10 @@ Block
     }
 ;
 DeclarationStmt
-    : LET ID ':' Type '=' ExpressionStmt { insert_symbol($<s_val>4, $<s_val>2, "-", 2 ) }
-    | LET MUT ID ':' Type '=' ExpressionStmt { insert_symbol($<s_val>5, $<s_val>3, "-", 2 ) }
-    | LET ID ':' DeclareArrayStmt '=' ExpressionStmt { insert_symbol("array", $<s_val>2, "-", 2 ) }
-    | LET MUT ID ':' DeclareArrayStmt '=' ExpressionStmt { insert_symbol("array", $<s_val>3, "-", 2 ) }
+    : LET ID ':' Type '=' ExpressionStmt { insert_symbol($<s_val>4, $<s_val>2, "-", 2, false ); }
+    | LET MUT ID ':' Type '=' ExpressionStmt { insert_symbol($<s_val>5, $<s_val>3, "-", 2, true ); }
+    | LET ID ':' DeclareArrayStmt '=' ExpressionStmt { insert_symbol("array", $<s_val>2, "-", 2, false ); }
+    | LET MUT ID ':' DeclareArrayStmt '=' ExpressionStmt { insert_symbol("array", $<s_val>3, "-", 2, true ); }
 ;
 AssignmentStmt
     : ExpressionStmt assign_op ExpressionStmt { printf("%s\n", $<s_val>2); }
@@ -248,7 +248,7 @@ MultiplicationExpr
     : UnaryExpr mul_op UnaryExpr
     {
         $$ = $1;
-        printf("%s\n", $<s_val>2)
+        printf("%s\n", $<s_val>2);
 
     }
     | UnaryExpr { $$ = $1; }
@@ -259,12 +259,12 @@ UnaryExpr
 ;
 Operand
     : Literal { $$ = $1; }
-    | ID { $$ = lookup_symbol($<s_val>1, false) }
-    | '(' ExpressionStmt ')' } { $$ = $2; }
+    | ID { $$ = lookup_symbol($<s_val>1, false) ;}
+    | '(' ExpressionStmt ')' { $$ = $2; }
 ;
 Literal
     : INT_LIT { $$ = "i32"; printf("INT_LIT %d\n", $<i_val>1);}
-    | FLOAT_LIT { $$ = "f32"; printf("FLOAT_LIT %d\n", $<f_val>1);}
+    | FLOAT_LIT { $$ = "f32"; printf("FLOAT_LIT %f\n", $<f_val>1);}
     | '"' STRING_LIT '"' { $$ = "str"; printf("STRING_LIT %s\n", $<s_val>1);}
     | TRUE { $$ = "bool"; printf("FALSE 0\n");}
     | FALSE { $$ = "bool"; printf("TRUE 1\n");}
@@ -275,7 +275,7 @@ assign_op
     | ADD_ASSIGN {$$ = "ADD";}
     | SUB_ASSIGN {$$ = "SUB";}
     | MUL_ASSIGN {$$ = "MUL";}
-    | QUO_ASSIGN {$$ = "QUO";}
+    | DIV_ASSIGN {$$ = "DIV";}
     | REM_ASSIGN {$$ = "REM";}
 ;
 
@@ -307,7 +307,7 @@ unary_op
 Type 
     : INT		{ $$ = "i32"; }
 	| FLOAT		{ $$ = "f32"; }
-	| STRING	{ $$ = "str"; }
+	| STR	    { $$ = "str"; }
 	| BOOL		{ $$ = "bool"; }
 ;
 
@@ -334,7 +334,7 @@ int main(int argc, char *argv[])
 static void create_symbol() {
     global_scope ++;
     struct table *tmp = malloc(sizeof(struct symbol));
-    tmp -> prev = cur_table;
+    tmp -> prev = current_table;
     tmp -> scope = global_scope;
     tmp -> symbol_number = 0;
     tmp -> head = NULL;
@@ -342,7 +342,7 @@ static void create_symbol() {
     printf("> Create symbol table (scope level %d)\n", global_scope);
 }
 
-static void insert_symbol(char* type, char* name, char* func_sig, int mark_var) {// if mark_var = 0, function; else if mark_var = 1, parameter, else is 2
+static void insert_symbol(char* type, char* name, char* func_sig, int mark_var, bool has_mut) {// if mark_var = 0, function; else if mark_var = 1, parameter, else is 2
     struct symbol *tail = NULL;
     struct table *first = current_table;
     bool empty = false;
@@ -377,6 +377,12 @@ static void insert_symbol(char* type, char* name, char* func_sig, int mark_var) 
     // name
     new -> name = strdup(name);// 和strcpy不太一樣，可以直接把要複製的內容給未經過初始化或分配空間的指標，相當於strlen + 分配空間 + strcpy  
     // mut
+    if(mark_var == 0)
+        new -> mut = -1;
+    else if(has_mut)
+        new -> mut = 1;
+    else 
+        new -> mut = 0;
     // type
     new -> type = strdup(type);
     // addr and lineno 
@@ -410,7 +416,7 @@ static void insert_symbol(char* type, char* name, char* func_sig, int mark_var) 
         printf("> Insert `%s` (addr: %d) to scope level %d\n", name, new -> addr, global_scope);
 }
 
-static void lookup_symbol(char *name, int mark_var) {
+static char *lookup_symbol(char *name, int mark_var) {
     struct table *t = current_table;
     struct symbol *s = NULL;
     while(t!=NULL){
@@ -419,7 +425,7 @@ static void lookup_symbol(char *name, int mark_var) {
             if(strcmp(s-> name, name) == 0){
                 if(mark_var == 0){// function
                     printf("call: %s%s\n", s -> name, s -> func_sig);
-                    return s_pointer -> func_sig;
+                    return s -> func_sig;
                 }
                 else{// not function
                     printf("IDENT (name=%s, address=%d)\n", s->name, s->addr);
@@ -450,4 +456,9 @@ static void dump_symbol() {
     printf("\n");
     current_table = current_table-> prev;
     global_scope--;
+}
+
+static void build_func_para(char *para) {
+    char tmp = toupper(para[0]);
+    strcat(func_para, &tmp);
 }
