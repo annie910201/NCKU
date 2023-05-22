@@ -110,9 +110,10 @@ GlobalStatement
 FunctionDeclStmt
     : FuncOpen
     '(' ')' 
-    {
-        insert_symbol("func", $<s_val>2, "()V", 0, false);
+    {   
+        insert_symbol("func", $<s_val>2, "(V)V", 0, false);
         printf("> Insert `%s` (addr: -1) to scope level %d\n", $<s_val>2, 0);
+        create_symbol();
     }
     FuncBlock
     | FuncOpen
@@ -131,7 +132,6 @@ FuncOpen
     : FUNC ID 
     {
         printf("func: %s\n", $<s_val>2);
-        create_symbol();
         $$ = $<s_val>2;
     }
 ;
@@ -157,14 +157,14 @@ StatementList
     | Statement StatementList // statement越上面先做
 ;
 Statement
-    : Block NEWLINE // multi-statement
-    | DeclarationStmt NEWLINE
-    | ExpressionStmt
-    | AssignmentStmt NEWLINE
-    | IFStmt NEWLINE
-    | PrintStmt NEWLINE
-    | WhileStmt NEWLINE
-    | ForStmt NEWLINE
+    : Block ';' NEWLINE // multi-statement
+    | DeclarationStmt ';'NEWLINE
+    | ExpressionStmt ';' NEWLINE
+    | AssignmentStmt ';' NEWLINE
+    | IFStmt ';' NEWLINE
+    | PrintStmt ';' NEWLINE
+    | WhileStmt ';' NEWLINE
+    | ForStmt ';' NEWLINE
     | NEWLINE
 ;
 Block
@@ -259,7 +259,7 @@ UnaryExpr
 ;
 Operand
     : Literal { $$ = $1; }
-    | ID { $$ = lookup_symbol($<s_val>1, false) ;}
+    | ID { $$ = lookup_symbol($<s_val>1, 1) ;}
     | '(' ExpressionStmt ')' { $$ = $2; }
 ;
 Literal
@@ -295,7 +295,7 @@ add_op
 
 mul_op 
     : '*' { $$ = "MUL"; }
-    | '/' { $$ = "QUO"; }
+    | '/' { $$ = "DIV"; }
     | '%' { $$ = "REM"; }
 ;
 
@@ -322,9 +322,10 @@ int main(int argc, char *argv[])
     } else {
         yyin = stdin;
     }
-
+    create_symbol();
     yylineno = 0;
     yyparse();
+    dump_symbol();
 
 	printf("Total lines: %d\n", yylineno);
     fclose(yyin);
@@ -396,7 +397,7 @@ static void insert_symbol(char* type, char* name, char* func_sig, int mark_var, 
         addr ++;
     }
     else {
-        new -> lineno = yylineno ;
+        new -> lineno = yylineno + 1 ;
         new -> addr = addr;
         addr ++;
     }
@@ -424,7 +425,7 @@ static char *lookup_symbol(char *name, int mark_var) {
         while(s!= NULL){
             if(strcmp(s-> name, name) == 0){
                 if(mark_var == 0){// function
-                    printf("call: %s%s\n", s -> name, s -> func_sig);
+                    // printf("call: %s%s\n", s -> name, s -> func_sig);
                     return s -> func_sig;
                 }
                 else{// not function
@@ -453,7 +454,6 @@ static void dump_symbol() {
             tmp-> index, tmp-> name, tmp-> mut, tmp-> type, tmp-> addr, tmp-> lineno, tmp-> func_sig);
         tmp = tmp->next;
     }
-    printf("\n");
     current_table = current_table-> prev;
     global_scope--;
 }
