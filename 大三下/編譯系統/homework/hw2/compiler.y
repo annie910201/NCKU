@@ -2,7 +2,7 @@
 
 /* Definition section */
 %{
-    #include "compiler_common.h" //Extern variables that communicate with lex
+    #include "compiler_hw_common.h" //Extern variables that communicate with lex
     // #define YYDEBUG 1
     // int yydebug = 1;
 
@@ -44,14 +44,11 @@
         struct symbol *next;
     }
     struct table *current_table = NULL;
+
     /* Global variables */
     bool HAS_ERROR = false;
     int global_scope = -1;
     int addr = 0;
-    char return_type = 'z';
-    
-    // int number_node = 0;
-
 %}
 
 %error-verbose
@@ -68,14 +65,14 @@
 }
 
 /* Token without return */
-%token LET MUT NEWLINE 
-%token INT FLOAT BOOL STR 
+%token LET MUT NEWLINE
+%token INT FLOAT BOOL STR
 %token TRUE FALSE
 %token GEQ LEQ EQL NEQ LOR LAND
 %token ADD_ASSIGN SUB_ASSIGN MUL_ASSIGN DIV_ASSIGN REM_ASSIGN
 %token IF ELSE FOR WHILE LOOP
 %token PRINT PRINTLN
-%token FUNC RETURN BREAK 
+%token FUNC RETURN BREAK
 %token ID ARROW AS IN DOTDOT RSHIFT LSHIFT
 
 /* Token with return, which need to sepcify type */
@@ -107,182 +104,129 @@ GlobalStatement
 ;
 
 FunctionDeclStmt
-    : FUNC ID '(' ')' // ex: fn main() 
-    {
-        create_symbol();
-        printf("func: %s\n", $<s_val>2) /* fn main(), main is the string of 2  */
-        insert_symbol("func", $<s_val>2, "()V", 0)
-        printf("> Insert `%s` (addr: %d) to scope level %d\n", $<s_val>2, -1, 0);
-    }
-    FuncBlock // ex: fn foo(lhs: i32)
-    | FUNC ID '(' ParameterList ')'
-    {
-        create_symbol();
-        printf("func: %s\n", $<s_val>2) /* fn main(), main is the string of 2  */
-        char func_para[100] = "()";
-
-        // make new para
-        char tmp = toupper($<s_val>5[0]);// transfer to 大寫
-        strcat(func_para, &tmp);// why need to add &?
-
-        insert_symbol("func", $<s_val>2,func_para , 0)
-        printf("> Insert `%s` (addr: %d) to scope level %d\n", $<s_val>2, -1, 0);
-        return_type = (tmp);
-    }
-    FuncBlock
+    : FUNC ID '(' ')' FuncBlock
+    : FUNC ID '(' ParameterList ')' ARROW Type FuncBlock
 ;
-FuncBlock 
-    : '{' NEWLINE StatementList '}' // no return 
-    {
-        dump_symbol();
-    }
-    | '{' NEWLINE StatementList RETURN Expression ';' NEWLINE '}' // has return and return a value, ex: return 0;
-    {
-        if(return_type != 'z'){
-            printf("%creturn\n", return_type);
-                return_type = 'z';
-        }
-        dump_symbol();
-    }
+ParameterList
+    : ParameterList ',' ID ':' Type
+    | ID ':' Type
+;
+FuncBlock
+    : '{' NEWLINE StatementList '}'
+    | '{' NEWLINE StatementList RETURN ExpressionStmt NEWLINE'}'
 ;
 StatementList
-    : Statement StatementList 
-    | Statement 
+    : Statement
+    | Statement StatementList // statement越上面先做
 ;
 Statement
-    : DeclarationStmt NEWLINE
-    | SimpleStmt NEWLINE
-    | Block NEWLINE
-    | PrintStmt NEWLINE
+    : Block NEWLINE // multi-statement
+    | DeclarationStmt NEWLINE
+    | ExpressionStmt
+    | AssignmentStmt NEWLINE
     | IFStmt NEWLINE
-    | WHILEStmt NEWLINE
-    | FORStmt NEWLINE
+    | PrintStmt NEWLINE
+    | WhileStmt NEWLINE
+    | ForStmt NEWLINE
     | NEWLINE
-DeclarationStmt
-    : LET IDType ':' TYPE '=' Expression
-    {
-        insert_symbol($<s_val>4, ID,"-", 2);
-    }
-IDType
-    : ID
-    | MUT ID
-TYPE    
-    : INT		{ $$ = "i32"; }
-	| FLOAT		{ $$ = "f32"; }
-	| STR	    { $$ = "str"; }
-	| BOOL		{ $$ = "bool"; }
 ;
-Expression
+Block
+    : '{' NEWLINE StatementList '}'
+;
+DeclarationStmt
+    : LET ID ':' Type '=' ExpressionStmt
+    | LET MUT ID ':' Type '=' ExpressionStmt
+    | LET ID ':' DeclareArrayStmt '=' ExpressionStmt
+    | LET MUT ID ':' DeclareArrayStmt '=' ExpressionStmt
+;
+AssignmentStmt
+    : ExpressionStmt assign_op ExpressionStmt
+;
+IFStmt
+    : IF ExpressionStmt Block
+    | IF ExpressionStmt Block ELSE Block
+;
+PrintStmt
+    : PRINT '(' ExpressionStmt ')' 
+    | PRINTLN '(' ExpressionStmt ')' 
+;
+WhileStmt
+    : WHILE ExpressionStmt '{' NEWLINE StatementList '}'
+;
+ForStmt
+    : FOR ID IN ExpressionStmt '{' NEWLINE StatementList '}'
+;
+DeclareArrayStmt
+    : '[' DeclareArrayStmt ']'
+    | Type ';' ExpressionStmt
+;
+ExpressionStmt
     : LogicalORExpr
 ;
 LogicalORExpr
     : LogicalANDExpr LOR LogicalANDExpr
-    {
-        if((strcmp($<s_val>1, "i32") == 0) || (strcmp($<s_val>3, "i32") == 0))
-            printf("error:%d: invalid operation: (operator LOR not defined on int32)\n", yylineno);
-        printf("LOR\n");
-        $$ = "bool"
-    }
-    | LogicalANDExpr {$$ = $1;}
+    | LogicalANDExpr
 ;
 LogicalANDExpr
     : ComparisonExpr LAND ComparisonExpr
-    {
-        if((strcmp($<s_val>1, "i32") == 0)||(strcmp($<s_val>3, "i32") == 0)){
-            printf("error:%d: invalid operation: (operator LAND not defined on int32)\n", yylineno);
-        }
-        $$ = "bool"; 
-        printf("LAND\n");
-    }
-    | ComparisonExpr {$$ = $1;}
+    | ComparisonExpr
 ;
 ComparisonExpr
     : AdditionExpr cmp_op AdditionExpr
     {
-        if(strcmp($<s_val>1, $<s_val>3) != 0){
-            printf("error:%d: invalid operation: %s (mismatched types %s and %s)\n", yylineno, $<s_val>2, $<s_val>1, $<s_val>3);
-        }
         $$ = "bool";
         printf("%s\n", $<s_val>2);
     }
-    | AdditionExpr {$$ = $1;}
+    | AdditionExpr { $$ = $1; }
 ;
-
 AdditionExpr
     : MultiplicationExpr add_op MultiplicationExpr
     {
-        if(strcmp($<s_val>1, $<s_val>3) != 0){
-            printf("error:%d: invalid operation: %s (mismatched types %s and %s)\n", yylineno, $<s_val>2, $<s_val>1, $<s_val>3);
-        }
-        $$ = $1;
+        $$ = $1; 
         printf("%s\n", $<s_val>2);
     }
     | AdditionExpr add_op MultiplicationExpr
-    {$$ = $1;
-    printf("%s\n", $<s_val>2);
+    {
+        $$ = $1; 
+        printf("%s\n", $<s_val>2);
     }
-    | MultiplicationExpr {$$ = $1;}
+    | MultiplicationExpr { $$ = $1; }
 ;
-
 MultiplicationExpr
     : UnaryExpr mul_op UnaryExpr
     {
-        if((strcmp($<s_val>2, "REM") == 0)&&(strcmp($<s_val>3, "f32") == 0)){
-            printf("error:%d: invalid operation: (operator REM not defined on f32)\n", yylineno);
-        }
         $$ = $1;
-        printf("%s\n", $<s_val>2);
-    }
-    | UnaryExpr {$$ = $1;}
-;
+        printf("%s\n", $<s_val>2)
 
-UnaryExpr
-    : unary_op UnaryExpr 
-    { 
-        $$ = $2; 
-        printf("%s\n", $<s_val>1);
     }
-    | PrimaryExpr { $$ = $1; }
+    | UnaryExpr { $$ = $1; }
 ;
-PrimaryExpr 
-    : Operand { $$ = $1; }
-    | ConversionExpr
+UnaryExpr
+    : unary_op UnaryExpr { $$ = $2; printf("%s\n", $<s_val>1); }
+    | Operand { $$ = $1; }
 ;
-Operand 
+Operand
     : Literal { $$ = $1; }
-    | ID { $$ = lookup_symbol($<s_val>1, false); } 
-    | ID '(' ')' { lookup_symbol($<s_val>1, true);} 
-    | ID '(' FuncPara ')' { lookup_symbol($<s_val>1, true);} 
-    | '(' Expression ')' { $$ = $2; }
+    | ID { $$ = lookup_symbol($<s_val>1, false) }
+    | '(' ExpressionStmt ')' } { $$ = $2; }
 ;
 Literal
-    : INT_LIT
-        {$$ = "i32"; 
-        printf("INT_LIT %d\n", $<i_val>1); 
-        }
-    | FLOAT_LIT
-        {$$ = "f32"; 
-        printf("FLOAT_LIT %f\n", $<f_val>1); 
-        }
-    | TRUE 
-        {$$ = "bool"; 
-        printf("TRUE\n");
-        }
-    | FALSE 
-        {$$ = "bool"; 
-        printf("FALSE\n");
-        }
-    | '"' STR '"'
-        {$$ = "string"; 
-        printf("STRING_LIT %s\n", $<s_val>2); 
-        }
+    : INT_LIT { $$ = "i32"; printf("INT_LIT %d\n", $<i_val>1);}
+    | FLOAT_LIT { $$ = "f32"; printf("FLOAT_LIT %d\n", $<f_val>1);}
+    | '"' STRING_LIT '"' { $$ = "str"; printf("STRING_LIT %s\n", $<s_val>1);}
+    | TRUE { $$ = "bool"; printf("FALSE 0\n");}
+    | FALSE { $$ = "bool"; printf("TRUE 1\n");}
 ;
-ConversionExpr 
-    : Type '(' Expression ')' 
-    {
-        printf("%c2%c\n", $<s_val>3[0], $<s_val>1[0]);
-    }
+
+assign_op
+    : '=' {$$ = "ASSIGN";}
+    | ADD_ASSIGN {$$ = "ADD";}
+    | SUB_ASSIGN {$$ = "SUB";}
+    | MUL_ASSIGN {$$ = "MUL";}
+    | QUO_ASSIGN {$$ = "QUO";}
+    | REM_ASSIGN {$$ = "REM";}
 ;
+
 cmp_op 
     : EQL { $$ = "EQL"; }
     | NEQ { $$ = "NEQ"; }
@@ -308,8 +252,14 @@ unary_op
     | '-' { $$ = "NEG"; }
     | '!' { $$ = "NOT"; }
 ;
-ParameterList
+Type 
+    : INT		{ $$ = "i32"; }
+	| FLOAT		{ $$ = "f32"; }
+	| STRING	{ $$ = "str"; }
+	| BOOL		{ $$ = "bool"; }
 ;
+
+
 %%
 
 /* C code section */
@@ -408,7 +358,7 @@ static void insert_symbol(char* type, char* name, char* func_sig, int mark_var) 
         printf("> Insert `%s` (addr: %d) to scope level %d\n", name, new -> addr, global_scope);
 }
 
-static char *lookup_symbol(char *name, int mark_var) {
+static void lookup_symbol(char *name, int mark_var) {
     struct table *t = current_table;
     struct symbol *s = NULL;
     while(t!=NULL){
