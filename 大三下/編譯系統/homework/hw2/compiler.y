@@ -284,6 +284,22 @@ Operand
     : Literal { $$ = $1; }
     | ID { $$ = lookup_symbol($<s_val>1, 1) ;}
     | '(' ExpressionStmt ')' { $$ = $2; }
+    | ID AS Type 
+    {
+        $$ = lookup_symbol($<s_val>1, 1) ;
+        if(strcmp($<s_val>3, "i32")==0)
+            printf("f2i\n");
+        else 
+            printf("i2f\n");
+        
+    }
+    | ExpressionStmt AS Type
+    {
+        if(strcmp($<s_val>3, "i32")==0)
+            printf("f2i\n");
+        else 
+            printf("i2f\n");
+    }
 ;
 Literal
     : INT_LIT { $$ = "i32"; printf("INT_LIT %d\n", $<i_val>1);}
