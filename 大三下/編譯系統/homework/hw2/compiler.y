@@ -85,7 +85,7 @@
 %token <s_val> STRING_LIT
 
 /* Nonterminal with return, which need to sepcify type */
-%type <s_val> Type Literal cmp_op add_op mul_op unary_op assign_op 
+%type <s_val> Type Literal cmp_op add_op mul_op unary_op assign_op shift_op 
 %type <s_val> FuncOpen ExpressionStmt LogicalORExpr LogicalANDExpr ComparisonExpr AdditionExpr MultiplicationExpr UnaryExpr Operand ArrayExpr
 
 /* Yacc will start at this nonterminal */
@@ -173,7 +173,7 @@ Statement
     | DeclarationStmt ';' NEWLINE
     | ExpressionStmt
     | AssignmentStmt ';' NEWLINE
-    | IFStmt NEWLINE
+    | IFStmt 
     | PrintStmt ';' NEWLINE
     | WhileStmt NEWLINE
     | ForStmt ';' NEWLINE
@@ -185,7 +185,7 @@ CallFunction
     { 
         addr = 0;
         // has_return = true;
-        lookup_symbol($<s_val>1, 0); 
+        lookup_symbol($<s_val>1, 0); // function
     }
 Block
     : StartBlock RETURN Literal ';' NEWLINE '}'
@@ -195,6 +195,8 @@ Block
         
     }
     | StartBlock StatementList '}' { dump_symbol(); }
+    /* | StartBlock StatementList NEWLINE'}' { dump_symbol(); } */
+    | StartBlock BREAK Literal ';' NEWLINE '}' { dump_symbol();}
     
 ;
 StartBlock
@@ -203,20 +205,27 @@ StartBlock
 DeclarationStmt
     : LET ID ':' Type { insert_symbol($<s_val>4, $<s_val>2, "-", 2, false ); }
     | LET MUT ID ':' Type { insert_symbol($<s_val>5, $<s_val>3, "-", 2, true ); }
-    | LET ID ':' Type '=' ExpressionStmt { insert_symbol($<s_val>4, $<s_val>2, "-", 2, false ); }
+    | LET ID ':' Type '=' StatementList { insert_symbol($<s_val>4, $<s_val>2, "-", 2, false ); }
     | LET MUT ID ':' Type '=' ExpressionStmt { insert_symbol($<s_val>5, $<s_val>3, "-", 2, true ); }
     | LET ID ':' DeclareArrayStmt '=' ExpressionStmt { insert_symbol("array", $<s_val>2, "-", 2, false ); }
     // | LET MUT ID ':' DeclareArrayStmt '=' ExpressionStmt { insert_symbol("array", $<s_val>3, "-", 2, true ); }
     | LET MUT ID '=' ExpressionStmt { insert_symbol("i32", $<s_val>3, "-", 2, true ); }
+    | LET ID '=' Literal { insert_symbol($<s_val>4, $<s_val>2, "-", 2, false); }
+    | LET ID ':' Type '=' LoopStmt { insert_symbol($<s_val>4, $<s_val>2, "-", 2, false); }
 ;
 AssignmentStmt
-    : ID assign_op ExpressionStmt { printf("%s\n", $<s_val>2); }
+    : ID assign_op ExpressionStmt 
+    { 
+        if(strcmp(lookup_symbol($<s_val>1, 3), "undefined")!=0)
+            printf("%s\n", $<s_val>2); 
+    }
 ;
 IFStmt
     : IFOpen NEWLINE
     // | IF ExpressionStmt Block RETURN ExpressionStmt ';' NEWLINE '}'
     | IFOpen NEWLINE ELSE Block
     | IFOpen ELSE Block
+    
 ;
 IFOpen
     : IF ExpressionStmt Block 
@@ -232,6 +241,9 @@ WhileStmt
 ;
 ForStmt
     : FOR ID IN ExpressionStmt '{' NEWLINE StatementList '}'
+;
+LoopStmt
+    : LOOP Block
 ;
 DeclareArrayStmt
     : '[' DeclareArrayStmt ']'
@@ -259,6 +271,10 @@ LogicalANDExpr
 ComparisonExpr
     : AdditionExpr cmp_op AdditionExpr
     {
+        // lookup_symbol($<s_val>1, 2);
+        if(strcmp($<s_val>1, $<s_val>3) != 0){
+            printf("error:%d: invalid operation: %s (mismatched types %s and %s)\n", yylineno+1, $<s_val>2, $<s_val>1, $<s_val>3);
+        }
         $$ = "bool";
         printf("%s\n", $<s_val>2);
     }
@@ -287,6 +303,15 @@ MultiplicationExpr
         printf("%s\n", $<s_val>2);
 
     }
+    | UnaryExpr shift_op UnaryExpr
+    {
+        if(strcmp($<s_val>1, $<s_val>3) != 0){
+            printf("error:%d: invalid operation: %s (mismatched types %s and %s)\n", yylineno+1, $<s_val>2, $<s_val>1, $<s_val>3);
+        }
+        $$ = $1;
+        printf("%s\n", $<s_val>2);
+        
+    }
     | UnaryExpr { $$ = $1; }
 ;
 UnaryExpr
@@ -301,15 +326,11 @@ ArrayExpr
 ;
 Operand
     : Literal { $$ = $1; }
-    | Literal AS
-    {
-        casting = true;
-    }
-    Type
-    | ID { $$ = lookup_symbol($<s_val>1, 1) ;}
-    | '(' ExpressionStmt ')' { $$ = $2; }
-    | ID '[' INT_LIT ']' { $$ = lookup_symbol($<s_val>1, 1); printf("INT_LIT %d\n", $<i_val>3);}
-    | ID AS 
+    | Literal AS { casting = true; } Type // change_type
+    | ID { $$ = lookup_symbol($<s_val>1, 2) ;}
+    | '(' ExpressionStmt ')' { $$ = $2; } // call function
+    | ID '[' INT_LIT ']' { $$ = lookup_symbol($<s_val>1, 2); printf("INT_LIT %d\n", $<i_val>3);} // array
+    | ID AS // change_type
     {
         casting = true;
         lookup_symbol($<s_val>1, 1) ;
@@ -317,10 +338,10 @@ Operand
     Type 
     | ID '(' ID ',' ID ')'
     {
-        lookup_symbol($<s_val>3, 2);
-        lookup_symbol($<s_val>5, 2);
+        lookup_symbol($<s_val>3, 1); // parameter
+        lookup_symbol($<s_val>5, 1); // parameter
         has_return = true;
-        lookup_symbol($<s_val>1, 0);
+        lookup_symbol($<s_val>1, 0); // function name
     }
 ;
 Literal
@@ -359,6 +380,11 @@ mul_op
     : '*' { $$ = "MUL"; }
     | '/' { $$ = "DIV"; }
     | '%' { $$ = "REM"; }
+;
+
+shift_op
+    : LSHIFT { $$ = "LSHIFT"; }
+    | RSHIFT { $$ = "RSHIFT"; }
 ;
 
 unary_op 
@@ -419,7 +445,7 @@ static void create_symbol() {
     printf("> Create symbol table (scope level %d)\n", global_scope);
 }
 
-static void insert_symbol(char* type, char* name, char* func_sig, int mark_var, bool has_mut) {// if mark_var = 0, function; else if mark_var = 1, parameter, else is 2
+static void insert_symbol(char* type, char* name, char* func_sig, int mark_var, bool has_mut) {// if mark_var = 0, function; else if mark_var = 1, parameter, else(id) is 2
     struct symbol *tail = NULL;
     struct table *first = current_table;
     bool empty = false;
@@ -493,7 +519,7 @@ static void insert_symbol(char* type, char* name, char* func_sig, int mark_var, 
         printf("> Insert `%s` (addr: %d) to scope level %d\n", name, new -> addr, global_scope);
 }
 
-static char *lookup_symbol(char *name, int mark_var) {
+static char *lookup_symbol(char *name, int mark_var) { // if mark_var = 0, function; else if mark_var = 1, parameter, else(id) is 2
     struct table *t = current_table;
     struct symbol *s = NULL;
     while(t!=NULL){
@@ -514,10 +540,12 @@ static char *lookup_symbol(char *name, int mark_var) {
                     }
                 }
                     
-                else{// not function
+                else if(mark_var != 3){// not function
                     printf("IDENT (name=%s, address=%d)\n", s->name, s->addr);
                     return s-> type;
                 }
+                else
+                    return s-> type;
             }
             else// name is not same
                 s = s->next;
@@ -526,7 +554,7 @@ static char *lookup_symbol(char *name, int mark_var) {
     }
     /* if it's not return until this step, it is represent the symbol is an error */
     printf("error:%d: undefined: %s\n", yylineno+1, name);
-    return "ERROR";
+    return "undefined";
 }
 
 static void dump_symbol() {
