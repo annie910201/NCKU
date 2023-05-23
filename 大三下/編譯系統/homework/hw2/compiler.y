@@ -176,7 +176,7 @@ Statement
     | IFStmt 
     | PrintStmt ';' NEWLINE
     | WhileStmt NEWLINE
-    | ForStmt ';' NEWLINE
+    | ForStmt NEWLINE
     | CallFunction NEWLINE;
     | NEWLINE
 ;
@@ -240,7 +240,18 @@ WhileStmt
     : WHILE ExpressionStmt Block
 ;
 ForStmt
-    : FOR ID IN ExpressionStmt '{' NEWLINE StatementList '}'
+    : FOR ID IN ID 
+    {
+        lookup_symbol($<s_val>4, 2);
+    }
+    StartBlock
+    {
+        insert_symbol("i32", $<s_val>2, "-", 3, false);
+    } 
+    StatementList  '}'
+    {
+        dump_symbol();
+    }
 ;
 LoopStmt
     : LOOP Block
@@ -445,7 +456,7 @@ static void create_symbol() {
     printf("> Create symbol table (scope level %d)\n", global_scope);
 }
 
-static void insert_symbol(char* type, char* name, char* func_sig, int mark_var, bool has_mut) {// if mark_var = 0, function; else if mark_var = 1, parameter, else(id) is 2
+static void insert_symbol(char* type, char* name, char* func_sig, int mark_var, bool has_mut) {// if mark_var = 0, function; else if mark_var = 1, parameter, else if mark_var == 2, id, else(foreach), mark_var == 3
     struct symbol *tail = NULL;
     struct table *first = current_table;
     bool empty = false;
@@ -498,8 +509,13 @@ static void insert_symbol(char* type, char* name, char* func_sig, int mark_var, 
         new -> addr = addr;
         addr ++;
     }
-    else { // id
+    else if(mark_var == 2) { // id
         new -> lineno = yylineno + 1 ;
+        new -> addr = addr;
+        addr ++;
+    }
+    else{
+        new -> lineno = yylineno;
         new -> addr = addr;
         addr ++;
     }
@@ -515,7 +531,7 @@ static void insert_symbol(char* type, char* name, char* func_sig, int mark_var, 
         first -> head = new;
     }
     // print
-    if(mark_var ==2)// id
+    if(mark_var ==2 || mark_var == 3)// id
         printf("> Insert `%s` (addr: %d) to scope level %d\n", name, new -> addr, global_scope);
 }
 
