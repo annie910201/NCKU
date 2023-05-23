@@ -52,7 +52,7 @@
     int addr = 0;
     bool casting = false;
     char func_para[100] = "(";
-    char return_type = 'z';
+    bool has_return = false;
 %}
 
 %error-verbose
@@ -110,6 +110,19 @@ GlobalStatement
 
 FunctionDeclStmt
     : FuncOpen
+    '(' 
+    {
+        insert_symbol("func", $<s_val>2, func_para, 0, false);
+        printf("> Insert `%s` (addr: -1) to scope level %d\n", $<s_val>2, 0);
+        create_symbol();
+        has_return = true;
+        // strcat(func_para, ")");
+        // build_func_para($<s_val>6);
+        // strcpy(func_para, "(");
+        // return_type = ($<s_val>5[0]);
+    }
+    ParameterList ')' ARROW Type FuncBlock
+    | FuncOpen
     '(' ')' 
     {   
         insert_symbol("func", $<s_val>2, "(V)V", 0, false);
@@ -117,23 +130,7 @@ FunctionDeclStmt
         create_symbol();
     }
     FuncBlock
-    | FuncOpen
-    '(' 
-    {
-        insert_symbol("func", $<s_val>2, func_para, 0, false);
-        printf("> Insert `%s` (addr: -1) to scope level %d\n", $<s_val>2, 0);
-        create_symbol();
-        // strcat(func_para, ")");
-        // build_func_para($<s_val>6);
-        // strcpy(func_para, "(");
-        // return_type = ($<s_val>5[0]);
-    }
-    ParameterList ')' ARROW Type FuncBlock
-    {
-        if(strcmp($<s_val>4, "bool") == 0){
-            return_type = 'b';
-        }
-    }
+    
 ;
 FuncOpen
     : FUNC ID 
@@ -158,8 +155,14 @@ ParameterList
     }
 ;
 FuncBlock
-    : '{' NEWLINE StatementList '}' { dump_symbol(); }
-    // | '{' NEWLINE RETURN ExpressionStmt ';' NEWLINE'}' { dump_symbol(); }
+    : '{' NEWLINE StatementList '}' 
+    { 
+        if(has_return){
+            printf("breturn\n");
+            has_return = false;
+        }
+        dump_symbol(); 
+    }
 ;
 StatementList
     : Statement
@@ -177,23 +180,17 @@ Statement
     | NEWLINE
 ;
 Block
-    : '{' 
+    : StartBlock RETURN Literal ';' NEWLINE '}'
     {
-        create_symbol();
-    }
-    NEWLINE StatementList '}'
-    {
+        printf("breturn\n");
         dump_symbol();
+        
     }
-    | '{' 
-    {
-        create_symbol();
-    }
-    NEWLINE '\t' RETURN ExpressionStmt ';' NEWLINE '}'
-    {
-        printf("%creturn\n", return_type);
-        dump_symbol();
-    }
+    | StartBlock StatementList '}' { dump_symbol(); }
+    
+;
+StartBlock
+    : '{' { create_symbol(); } NEWLINE
 ;
 DeclarationStmt
     : LET ID ':' Type { insert_symbol($<s_val>4, $<s_val>2, "-", 2, false ); }
