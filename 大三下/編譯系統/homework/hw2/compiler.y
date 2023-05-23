@@ -86,7 +86,7 @@
 
 /* Nonterminal with return, which need to sepcify type */
 %type <s_val> Type Literal cmp_op add_op mul_op unary_op assign_op 
-%type <s_val> FuncOpen ExpressionStmt LogicalORExpr LogicalANDExpr ComparisonExpr AdditionExpr MultiplicationExpr UnaryExpr Operand
+%type <s_val> FuncOpen ExpressionStmt LogicalORExpr LogicalANDExpr ComparisonExpr AdditionExpr MultiplicationExpr UnaryExpr Operand ArrayExpr
 
 /* Yacc will start at this nonterminal */
 %start Program 
@@ -177,8 +177,16 @@ Statement
     | PrintStmt ';' NEWLINE
     | WhileStmt NEWLINE
     | ForStmt ';' NEWLINE
+    | CallFunction NEWLINE;
     | NEWLINE
 ;
+CallFunction
+    : ID '(' ')' ';' 
+    { 
+        addr = 0;
+        // has_return = true;
+        lookup_symbol($<s_val>1, 0); 
+    }
 Block
     : StartBlock RETURN Literal ';' NEWLINE '}'
     {
@@ -197,7 +205,7 @@ DeclarationStmt
     | LET MUT ID ':' Type { insert_symbol($<s_val>5, $<s_val>3, "-", 2, true ); }
     | LET ID ':' Type '=' ExpressionStmt { insert_symbol($<s_val>4, $<s_val>2, "-", 2, false ); }
     | LET MUT ID ':' Type '=' ExpressionStmt { insert_symbol($<s_val>5, $<s_val>3, "-", 2, true ); }
-    // | LET ID ':' DeclareArrayStmt '=' ExpressionStmt { insert_symbol("array", $<s_val>2, "-", 2, false ); }
+    | LET ID ':' DeclareArrayStmt '=' ExpressionStmt { insert_symbol("array", $<s_val>2, "-", 2, false ); }
     // | LET MUT ID ':' DeclareArrayStmt '=' ExpressionStmt { insert_symbol("array", $<s_val>3, "-", 2, true ); }
     | LET MUT ID '=' ExpressionStmt { insert_symbol("i32", $<s_val>3, "-", 2, true ); }
 ;
@@ -205,9 +213,13 @@ AssignmentStmt
     : ID assign_op ExpressionStmt { printf("%s\n", $<s_val>2); }
 ;
 IFStmt
-    : IF ExpressionStmt Block NEWLINE
+    : IFOpen NEWLINE
     // | IF ExpressionStmt Block RETURN ExpressionStmt ';' NEWLINE '}'
-    | IF ExpressionStmt Block NEWLINE ELSE Block
+    | IFOpen NEWLINE ELSE Block
+    | IFOpen ELSE Block
+;
+IFOpen
+    : IF ExpressionStmt Block 
 ;
 PrintStmt
     : PRINT '(' NEWLINE ExpressionStmt NEWLINE')' {printf("PRINT %s\n", $<s_val>4);}
@@ -223,7 +235,7 @@ ForStmt
 ;
 DeclareArrayStmt
     : '[' DeclareArrayStmt ']'
-    | Type ';' ExpressionStmt
+    | Type ';' Literal
 ;
 ExpressionStmt
     : LogicalORExpr {$$ = $1;}
@@ -279,7 +291,13 @@ MultiplicationExpr
 ;
 UnaryExpr
     : unary_op UnaryExpr { $$ = $2; printf("%s\n", $<s_val>1); }
+    | ArrayExpr {$$ = $1;}
     | Operand { $$ = $1; }
+;
+ArrayExpr
+    : Literal ',' ArrayExpr
+    | '[' Literal ',' ArrayExpr
+    | Literal ']'
 ;
 Operand
     : Literal { $$ = $1; }
@@ -290,12 +308,20 @@ Operand
     Type
     | ID { $$ = lookup_symbol($<s_val>1, 1) ;}
     | '(' ExpressionStmt ')' { $$ = $2; }
+    | ID '[' INT_LIT ']' { $$ = lookup_symbol($<s_val>1, 1); printf("INT_LIT %d\n", $<i_val>3);}
     | ID AS 
     {
         casting = true;
         lookup_symbol($<s_val>1, 1) ;
     }
     Type 
+    | ID '(' ID ',' ID ')'
+    {
+        lookup_symbol($<s_val>3, 2);
+        lookup_symbol($<s_val>5, 2);
+        has_return = true;
+        lookup_symbol($<s_val>1, 0);
+    }
 ;
 Literal
     : INT_LIT { $$ = "i32"; printf("INT_LIT %d\n", $<i_val>1);}
@@ -446,7 +472,7 @@ static void insert_symbol(char* type, char* name, char* func_sig, int mark_var, 
         new -> addr = addr;
         addr ++;
     }
-    else {
+    else { // id
         new -> lineno = yylineno + 1 ;
         new -> addr = addr;
         addr ++;
@@ -475,7 +501,19 @@ static char *lookup_symbol(char *name, int mark_var) {
         while(s!= NULL){
             if(strcmp(s-> name, name) == 0){
                 if(mark_var == 0)// function
-                    return s -> func_sig;
+                {
+                    if(has_return){
+                        printf("call: %s(II)B\n", s -> name);
+                        has_return = false;
+                        s -> func_sig = "(II)B";
+                        return "(II)B" ;
+                    }
+                    else{
+                        printf("call: %s%s\n", s -> name, s -> func_sig);
+                        return s -> func_sig;
+                    }
+                }
+                    
                 else{// not function
                     printf("IDENT (name=%s, address=%d)\n", s->name, s->addr);
                     return s-> type;
