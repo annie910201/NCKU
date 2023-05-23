@@ -50,8 +50,9 @@
     bool HAS_ERROR = false;
     int global_scope = -1;
     int addr = 0;
+    bool casting = false;
     char func_para[100] = "(";
-    char return_type = 'z';
+    bool has_return = false;
 %}
 
 %error-verbose
@@ -85,7 +86,7 @@
 
 /* Nonterminal with return, which need to sepcify type */
 %type <s_val> Type Literal cmp_op add_op mul_op unary_op assign_op 
-%type <s_val> FuncOpen ExpressionStmt LogicalORExpr LogicalANDExpr ComparisonExpr AdditionExpr MultiplicationExpr UnaryExpr Operand
+%type <s_val> FuncOpen ExpressionStmt LogicalORExpr LogicalANDExpr ComparisonExpr AdditionExpr MultiplicationExpr UnaryExpr Operand ArrayExpr
 
 /* Yacc will start at this nonterminal */
 %start Program 
@@ -109,6 +110,19 @@ GlobalStatement
 
 FunctionDeclStmt
     : FuncOpen
+    '(' 
+    {
+        insert_symbol("func", $<s_val>2, func_para, 0, false);
+        printf("> Insert `%s` (addr: -1) to scope level %d\n", $<s_val>2, 0);
+        create_symbol();
+        has_return = true;
+        // strcat(func_para, ")");
+        // build_func_para($<s_val>6);
+        // strcpy(func_para, "(");
+        // return_type = ($<s_val>5[0]);
+    }
+    ParameterList ')' ARROW Type FuncBlock
+    | FuncOpen
     '(' ')' 
     {   
         insert_symbol("func", $<s_val>2, "(V)V", 0, false);
@@ -116,17 +130,7 @@ FunctionDeclStmt
         create_symbol();
     }
     FuncBlock
-    | FuncOpen
-    '(' ParameterList ')' ARROW Type 
-    {
-        strcat(func_para, ")");
-        build_func_para($<s_val>6);
-        insert_symbol("func", $<s_val>2, func_para, 0, false);
-        printf("> Insert `%s` (addr: -1) to scope level %d\n", $<s_val>2, 0);
-        strcpy(func_para, "(");
-        return_type = ($<s_val>5[0]);
-    }
-    FuncBlock
+    
 ;
 FuncOpen
     : FUNC ID 
@@ -137,20 +141,28 @@ FuncOpen
 ;
 
 ParameterList
-    : ParameterList ',' ID ':' Type
+    :  ParameterList  ',' ID ':' Type
     {
-        insert_symbol($<s_val>4, $<s_val>2, "-", 1, false);
+        insert_symbol($<s_val>5, $<s_val>3, "-", 1, false);
+        printf("> Insert `%s` (addr: %d) to scope level %d\n", $<s_val>3, addr-1, global_scope);
         // build_func_para($<s_val>)
     }
     | ID ':' Type
     {
         insert_symbol($<s_val>3, $<s_val>1, "-", 1, false);
+        printf("> Insert `%s` (addr: %d) to scope level %d\n", $<s_val>1, addr-1, global_scope);
         // build_func_para($<s_val>)
     }
 ;
 FuncBlock
-    : '{' NEWLINE StatementList '}' { dump_symbol(); }
-    | '{' NEWLINE StatementList RETURN ExpressionStmt NEWLINE'}' { dump_symbol(); }
+    : '{' NEWLINE StatementList '}' 
+    { 
+        if(has_return){
+            printf("breturn\n");
+            has_return = false;
+        }
+        dump_symbol(); 
+    }
 ;
 StatementList
     : Statement
@@ -165,24 +177,35 @@ Statement
     | PrintStmt ';' NEWLINE
     | WhileStmt NEWLINE
     | ForStmt ';' NEWLINE
+    | CallFunction NEWLINE;
     | NEWLINE
 ;
+CallFunction
+    : ID '(' ')' ';' 
+    { 
+        addr = 0;
+        // has_return = true;
+        lookup_symbol($<s_val>1, 0); 
+    }
 Block
-    : '{' 
+    : StartBlock RETURN Literal ';' NEWLINE '}'
     {
-        create_symbol();
-    }
-    NEWLINE StatementList '}'
-    {
+        printf("breturn\n");
         dump_symbol();
+        
     }
+    | StartBlock StatementList '}' { dump_symbol(); }
+    
+;
+StartBlock
+    : '{' { create_symbol(); } NEWLINE
 ;
 DeclarationStmt
     : LET ID ':' Type { insert_symbol($<s_val>4, $<s_val>2, "-", 2, false ); }
     | LET MUT ID ':' Type { insert_symbol($<s_val>5, $<s_val>3, "-", 2, true ); }
     | LET ID ':' Type '=' ExpressionStmt { insert_symbol($<s_val>4, $<s_val>2, "-", 2, false ); }
     | LET MUT ID ':' Type '=' ExpressionStmt { insert_symbol($<s_val>5, $<s_val>3, "-", 2, true ); }
-    // | LET ID ':' DeclareArrayStmt '=' ExpressionStmt { insert_symbol("array", $<s_val>2, "-", 2, false ); }
+    | LET ID ':' DeclareArrayStmt '=' ExpressionStmt { insert_symbol("array", $<s_val>2, "-", 2, false ); }
     // | LET MUT ID ':' DeclareArrayStmt '=' ExpressionStmt { insert_symbol("array", $<s_val>3, "-", 2, true ); }
     | LET MUT ID '=' ExpressionStmt { insert_symbol("i32", $<s_val>3, "-", 2, true ); }
 ;
@@ -190,8 +213,13 @@ AssignmentStmt
     : ID assign_op ExpressionStmt { printf("%s\n", $<s_val>2); }
 ;
 IFStmt
-    : IF ExpressionStmt Block NEWLINE
-    | IF ExpressionStmt Block NEWLINE ELSE Block
+    : IFOpen NEWLINE
+    // | IF ExpressionStmt Block RETURN ExpressionStmt ';' NEWLINE '}'
+    | IFOpen NEWLINE ELSE Block
+    | IFOpen ELSE Block
+;
+IFOpen
+    : IF ExpressionStmt Block 
 ;
 PrintStmt
     : PRINT '(' NEWLINE ExpressionStmt NEWLINE')' {printf("PRINT %s\n", $<s_val>4);}
@@ -207,7 +235,7 @@ ForStmt
 ;
 DeclareArrayStmt
     : '[' DeclareArrayStmt ']'
-    | Type ';' ExpressionStmt
+    | Type ';' Literal
 ;
 ExpressionStmt
     : LogicalORExpr {$$ = $1;}
@@ -239,16 +267,19 @@ ComparisonExpr
 AdditionExpr
     : MultiplicationExpr add_op MultiplicationExpr
     {
-        $$ = $1; 
+        
         printf("%s\n", $<s_val>2);
+        $$ = $1; 
     }
     | AdditionExpr add_op MultiplicationExpr
     {
-        $$ = $1; 
         printf("%s\n", $<s_val>2);
+        $$ = $1; 
+        
     }
     | MultiplicationExpr { $$ = $1; }
 ;
+
 MultiplicationExpr
     : UnaryExpr mul_op UnaryExpr
     {
@@ -260,12 +291,37 @@ MultiplicationExpr
 ;
 UnaryExpr
     : unary_op UnaryExpr { $$ = $2; printf("%s\n", $<s_val>1); }
+    | ArrayExpr {$$ = $1;}
     | Operand { $$ = $1; }
+;
+ArrayExpr
+    : Literal ',' ArrayExpr
+    | '[' Literal ',' ArrayExpr
+    | Literal ']'
 ;
 Operand
     : Literal { $$ = $1; }
+    | Literal AS
+    {
+        casting = true;
+    }
+    Type
     | ID { $$ = lookup_symbol($<s_val>1, 1) ;}
     | '(' ExpressionStmt ')' { $$ = $2; }
+    | ID '[' INT_LIT ']' { $$ = lookup_symbol($<s_val>1, 1); printf("INT_LIT %d\n", $<i_val>3);}
+    | ID AS 
+    {
+        casting = true;
+        lookup_symbol($<s_val>1, 1) ;
+    }
+    Type 
+    | ID '(' ID ',' ID ')'
+    {
+        lookup_symbol($<s_val>3, 2);
+        lookup_symbol($<s_val>5, 2);
+        has_return = true;
+        lookup_symbol($<s_val>1, 0);
+    }
 ;
 Literal
     : INT_LIT { $$ = "i32"; printf("INT_LIT %d\n", $<i_val>1);}
@@ -311,8 +367,22 @@ unary_op
     | '!' { $$ = "NOT"; }
 ;
 Type 
-    : INT		{ $$ = "i32"; }
-	| FLOAT		{ $$ = "f32"; }
+    : INT		
+    { 
+        $$ = "i32";
+        if(casting){
+            casting = false;
+            printf("f2i\n");
+        } 
+    }
+	| FLOAT		
+    { 
+        $$ = "f32";
+        if(casting){
+            casting = false;
+            printf("i2f\n");
+        } 
+    }
 	| '&'STR	    { $$ = "str"; }
 	| BOOL		{ $$ = "bool"; }
 ;
@@ -402,7 +472,7 @@ static void insert_symbol(char* type, char* name, char* func_sig, int mark_var, 
         new -> addr = addr;
         addr ++;
     }
-    else {
+    else { // id
         new -> lineno = yylineno + 1 ;
         new -> addr = addr;
         addr ++;
@@ -419,7 +489,7 @@ static void insert_symbol(char* type, char* name, char* func_sig, int mark_var, 
         first -> head = new;
     }
     // print
-    if(mark_var !=0)// not function
+    if(mark_var ==2)// id
         printf("> Insert `%s` (addr: %d) to scope level %d\n", name, new -> addr, global_scope);
 }
 
@@ -431,7 +501,19 @@ static char *lookup_symbol(char *name, int mark_var) {
         while(s!= NULL){
             if(strcmp(s-> name, name) == 0){
                 if(mark_var == 0)// function
-                    return s -> func_sig;
+                {
+                    if(has_return){
+                        printf("call: %s(II)B\n", s -> name);
+                        has_return = false;
+                        s -> func_sig = "(II)B";
+                        return "(II)B" ;
+                    }
+                    else{
+                        printf("call: %s%s\n", s -> name, s -> func_sig);
+                        return s -> func_sig;
+                    }
+                }
+                    
                 else{// not function
                     printf("IDENT (name=%s, address=%d)\n", s->name, s->addr);
                     return s-> type;
