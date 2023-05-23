@@ -50,6 +50,7 @@
     bool HAS_ERROR = false;
     int global_scope = -1;
     int addr = 0;
+    bool casting = false;
     char func_para[100] = "(";
     char return_type = 'z';
 %}
@@ -257,16 +258,19 @@ ComparisonExpr
 AdditionExpr
     : MultiplicationExpr add_op MultiplicationExpr
     {
-        $$ = $1; 
+        
         printf("%s\n", $<s_val>2);
+        $$ = $1; 
     }
     | AdditionExpr add_op MultiplicationExpr
     {
-        $$ = $1; 
         printf("%s\n", $<s_val>2);
+        $$ = $1; 
+        
     }
     | MultiplicationExpr { $$ = $1; }
 ;
+
 MultiplicationExpr
     : UnaryExpr mul_op UnaryExpr
     {
@@ -282,24 +286,19 @@ UnaryExpr
 ;
 Operand
     : Literal { $$ = $1; }
+    | Literal AS
+    {
+        casting = true;
+    }
+    Type
     | ID { $$ = lookup_symbol($<s_val>1, 1) ;}
     | '(' ExpressionStmt ')' { $$ = $2; }
-    | ID AS Type 
+    | ID AS 
     {
-        $$ = lookup_symbol($<s_val>1, 1) ;
-        if(strcmp($<s_val>3, "i32")==0)
-            printf("f2i\n");
-        else 
-            printf("i2f\n");
-        
+        casting = true;
+        lookup_symbol($<s_val>1, 1) ;
     }
-    | ExpressionStmt AS Type
-    {
-        if(strcmp($<s_val>3, "i32")==0)
-            printf("f2i\n");
-        else 
-            printf("i2f\n");
-    }
+    Type 
 ;
 Literal
     : INT_LIT { $$ = "i32"; printf("INT_LIT %d\n", $<i_val>1);}
@@ -345,8 +344,22 @@ unary_op
     | '!' { $$ = "NOT"; }
 ;
 Type 
-    : INT		{ $$ = "i32"; }
-	| FLOAT		{ $$ = "f32"; }
+    : INT		
+    { 
+        $$ = "i32";
+        if(casting){
+            casting = false;
+            printf("f2i\n");
+        } 
+    }
+	| FLOAT		
+    { 
+        $$ = "f32";
+        if(casting){
+            casting = false;
+            printf("i2f\n");
+        } 
+    }
 	| '&'STR	    { $$ = "str"; }
 	| BOOL		{ $$ = "bool"; }
 ;
