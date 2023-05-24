@@ -257,8 +257,8 @@ LoopStmt
     : LOOP Block
 ;
 DeclareArrayStmt
-    : '[' DeclareArrayStmt ']'
-    | Type ';' Literal
+    : '[' DeclareArrayStmt ']' // multi-dimension
+    | Type ';' Literal 
 ;
 ExpressionStmt
     : LogicalORExpr {$$ = $1;}
@@ -334,7 +334,30 @@ ArrayExpr
     : Literal ',' ArrayExpr
     | '[' Literal ',' ArrayExpr
     | Literal ']'
+    | '&' ID 
+    {
+        lookup_symbol($<s_val>2, 2);
+    }
+    '[' DotExpr ']'
 ;
+DotExpr
+    : DOTDOT 
+    {
+        printf("DOTDOT\n");
+    }
+    Literal 
+    | DOtOpen
+    {
+        printf("DOTDOT\n");
+    }
+    | DOtOpen 
+    {
+        printf("DOTDOT\n");
+    }
+    Literal
+;
+DOtOpen
+    : Literal DOTDOT
 Operand
     : Literal { $$ = $1; }
     | Literal AS { casting = true; } Type // change_type
@@ -514,7 +537,7 @@ static void insert_symbol(char* type, char* name, char* func_sig, int mark_var, 
         new -> addr = addr;
         addr ++;
     }
-    else{
+    else{ // foreach
         new -> lineno = yylineno;
         new -> addr = addr;
         addr ++;
