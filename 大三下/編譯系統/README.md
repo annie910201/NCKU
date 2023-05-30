@@ -28,6 +28,8 @@
 [Compiler Design](https://www.youtube.com/playlist?list=PLEbnTDJUr_IcPtUXFy2b1sGRPsLFMghhS)
 - 課程完整，但口音我真的聽不懂
 
+[Compiler Net](https://www.youtube.com/playlist?list=PLk2lPS4V3HMB6iZmQePUFVmE7gXOXOwmc)
+
 ### 交大的
 [楊武](https://hackmd.io/1OBQAda9R7C-ufE0ski4Xg)
 
