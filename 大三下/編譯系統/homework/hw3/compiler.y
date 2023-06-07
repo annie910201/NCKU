@@ -10,7 +10,6 @@
     # define I 2 // id
     # define Fo 3 // foreach
 
-
     extern int yylineno;
     extern int yylex();
     extern FILE *yyin;
@@ -64,7 +63,7 @@
 
 
     /* hw3 */
-    static int *lookup_symbol_address(char*, int);
+    static int lookup_symbol_address(char*, int);
     static char *lookup_symbol_type(char*, int);
     static char *lookup_symbol(char*, int);
     static void code_generation();
@@ -73,6 +72,8 @@
     char id_storage[10], id_temp[10];
     int is_main = 0;
     bool is_while = false;
+    int cmp_op = 0;
+    int function_label = 0;
 %}
 
 
@@ -138,10 +139,11 @@ FunctionDeclStmt
     }
     ParameterList ')' ARROW Type
     {
-        if(strcmp($<s_val>6, "bool")==0)
+        strcat(func_para, ")");
+        if(strcmp($<s_val>7, "bool")==0)
             return_type = 'b';
         if(is_main == 0){
-            fprintf(fp, "%s%c\n", func_para, toupper($<s_val>6[0]));
+            fprintf(fp, "%s%c\n", func_para, toupper(return_type));
             fprintf(fp, ".limit stack 20\n");
             fprintf(fp, ".limit locals 20\n");
         }
@@ -150,7 +152,8 @@ FunctionDeclStmt
         }
     }
     FuncBlock{has_return = false;}
-    | FuncOpen '(' ')' 
+
+    | FuncOpen '(' ')'  
     {   
         insert_symbol("func", $<s_val>2, "(V)V", Fu, false);
         printf("> Insert `%s` (addr: -1) to scope level %d\n", $<s_val>2, 0);
@@ -233,12 +236,17 @@ CallFunction
     { 
         addr = 0;
         lookup_symbol($<s_val>1, Fu); // function
+
     }
+;
 Block
     : StartBlock RETURN Literal ';' NEWLINE '}'
     {
-        return_type = 'b';
-        printf("%creturn\n" , return_type);
+        if(strcmp($<s_val>3, "true") == 0 || strcmp($<s_val>3, "false") == 0){
+            return_type = 'b';
+            printf("%creturn\n" , return_type);
+        }
+        
         dump_symbol();
         
     }
@@ -393,15 +401,11 @@ IFStmt
     
 ;
 IFOpen
-    : IF ExpressionStmt 
+    : IF
     {
-        fprintf(fp, "; ------if_start------\n");
-        fprintf(fp, "ifeq L_if_%d\n", label_number++);
-        fprintf(fp, "goto L_if_%d\n", label_number++);
-        fprintf(fp, "L_if_%d: \n", label_number-2);//true
-        
-    }
-    Block 
+        fprintf(fp, "; ------here is if start------\n");
+    } 
+    ExpressionStmt Block 
 ;
 PrintStmt
     : PRINT '(' NEWLINE ExpressionStmt NEWLINE')' 
@@ -465,17 +469,17 @@ PrintStmt
 ;
 
 WhileStmt
-    : WHILE {
+    : WHILE 
+    {
         is_while = true;
-        // fprintf(fp, "L_while_%d: \n", label_number++);
-    }ExpressionStmt
+    }
+    ExpressionStmt
     {
         fprintf(fp, "; ------while_start------\n");
-        // fprintf(fp, "L_while_%d: \n", label_number++);
+        // if(strstr($<s_val>2, "LES"))
         fprintf(fp, "iflt L_while_%d\n", label_number++);
         fprintf(fp, "goto L_while_%d\n", label_number++);
         fprintf(fp, "L_while_%d: \n", label_number-2);//true
-        // fprintf(fp, "goto L_while_%d\n", label_number-2);
     } 
     Block
     {
@@ -540,7 +544,7 @@ ComparisonExpr
                 fprintf(fp, "L%d:\n", label_number-2);
                 fprintf(fp, "iconst_1\n");
                 fprintf(fp, "L%d:\n", label_number-1);
-                fprintf(fp, "; ----------------------------\n");
+                fprintf(fp, "; ----------greater end------------\n");
             }
                
             else if(strcmp($<s_val>2, "LES") == 0){
@@ -551,19 +555,16 @@ ComparisonExpr
                 fprintf(fp, "L%d:\n", label_number-2);
                 fprintf(fp, "iconst_1\n");
                 fprintf(fp, "L%d:\n", label_number-1);
-                fprintf(fp, "; ----------------------------\n");
+                fprintf(fp, "; --------less end--------\n");
             }
-            // else if(strcmp($<s_val>2, "EQL") == 0){
-            //     fprintf(fp, "; --- here is equal to ---\n");
-            //     fprintf(fp, "ifeq L%d\n" /* 0*/, label_number++);// label_number = 1
-            //     fprintf(fp, "iconst_0\n");
-            //     fprintf(fp, "goto L%d\n"/* 1*/, label_number++);// label_number = 2
-            //     fprintf(fp, "L%d:\n", label_number-2);/* 0*/
-            //     fprintf(fp, "iconst_1\n");
-            //     fprintf(fp, "L%d:\n", label_number-1);/* 1*/
-            //     fprintf(fp, "ifeq L%d\n" /* 2*/, label_number++);// label_number = 3
-            //     fprintf(fp, "; ----------------------------\n");
-            // }
+            else if(strcmp($<s_val>2, "EQL") == 0){
+                fprintf(fp, "; --- here is equal to ---\n");
+                fprintf(fp, "ifeq L_if_%d\n", label_number++);
+                fprintf(fp, "goto L_if_%d\n", label_number++);
+                fprintf(fp, "L_if_%d: \n", label_number-2);//true
+                // fprintf(fp, "L_if_%d: \n", label_number-1);
+                fprintf(fp, "; ---------equal end---------\n");
+            }
         }
         $$ = "bool";
         printf("%s\n", $<s_val>2);
@@ -878,7 +879,7 @@ static void insert_symbol(char* type, char* name, char* func_sig, int mark_var, 
         printf("> Insert `%s` (addr: %d) to scope level %d\n", name, new -> addr, global_scope);
 }
 
-static int *lookup_symbol_address(char *name, int mark_var) { // if mark_var = 0, function; else if mark_var = 1, parameter, else(id) is 2
+static int lookup_symbol_address(char *name, int mark_var) { // if mark_var = 0, function; else if mark_var = 1, parameter, else(id) is 2
     struct table *t = current_table;
     struct symbol *s = NULL;
     while(t!=NULL){
