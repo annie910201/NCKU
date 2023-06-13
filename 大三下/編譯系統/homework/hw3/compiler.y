@@ -151,7 +151,9 @@ FunctionDeclStmt
             is_main =0;
         }
     }
-    FuncBlock{has_return = false;}
+    FuncBlock{
+        has_return = false;
+    }
 
     | FuncOpen '(' ')'  
     {   
@@ -208,6 +210,7 @@ FuncBlock
         if(has_return){
             printf("%creturn\n", return_type);
             has_return = false;
+
         }
         dump_symbol(); 
         fprintf(fp, "return\n");
@@ -245,6 +248,10 @@ Block
         if(strcmp($<s_val>3, "true") == 0 || strcmp($<s_val>3, "false") == 0){
             return_type = 'b';
             printf("%creturn\n" , return_type);
+        }
+        if(return_type == 'b'){
+            fprintf(fp, "return\n");
+            fprintf(fp, ".end method\n");
         }
         
         dump_symbol();
@@ -314,7 +321,10 @@ DeclarationStmt
         else if(strcmp($<s_val>5, "bool") == 0)
             fprintf(fp, "istore %d\n", lookup_symbol_address($<s_val>3, I));
     }
-    | LET ID ':' DeclareArrayStmt '=' ExpressionStmt { insert_symbol("array", $<s_val>2, "-", I, false ); }
+    | LET ID ':' DeclareArrayStmt '=' ExpressionStmt { 
+        insert_symbol("array", $<s_val>2, "-", I, false );
+        
+    }
     | LET MUT ID '=' ExpressionStmt { 
         insert_symbol("i32", $<s_val>3, "-", I, true ); 
         fprintf(fp, "istore %d\n", lookup_symbol_address($<s_val>3, I));
@@ -346,14 +356,6 @@ AssignmentStmt
     } 
     ExpressionStmt 
     { 
-        // if(strcmp(lookup_symbol($<s_val>1, 3), "undefined")!=0)
-        //     printf("%s\n", $<s_val>2); 
-        
-        // if(strcmp($<s_val>1, $<s_val>2) != 0){
-        //     printf("error:%d: invalid operation: %s (mismatched types %s and %s)\n", yylineno, $<s_val>3, $<s_val>1, $<s_val>2);
-        // }
-        // printf("%s\n", $<s_val>3);
-
         if(strcmp($<s_val>3, "ADD_ASSIGN") == 0){
             fprintf(fp, "%cadd\n", $<s_val>1[0]);
         }
@@ -371,13 +373,13 @@ AssignmentStmt
         }
 
         if(strcmp($<s_val>1, "str")==0){
-            fprintf(fp, "astore %d\n", lookup_symbol_address(id_storage, false));
+            fprintf(fp, "astore %d\n", lookup_symbol_address(id_storage, I));
         }
         else if(strcmp($<s_val>1, "bool")==0){
-            fprintf(fp, "istore %d\n", lookup_symbol_address(id_storage, false));
+            fprintf(fp, "istore %d\n", lookup_symbol_address(id_storage, I));
         }
         else{
-            fprintf(fp, "%cstore %d\n", $<s_val>1[0], lookup_symbol_address(id_storage,false));
+            fprintf(fp, "%cstore %d\n", $<s_val>1[0], lookup_symbol_address(id_storage,I));
         }
     }
 ;
@@ -529,8 +531,6 @@ ComparisonExpr
             if(strcmp($<s_val>1, "i32") == 0){
                 
                 fprintf(fp, "isub\n");
-                // int number = 1;
-                // fprintf(fp, "%d\n", number);
             }
                 
             else if(strcmp($<s_val>1, "f32") == 0)
@@ -782,6 +782,7 @@ int main(int argc, char *argv[])
     dump_symbol();
 
 	printf("Total lines: %d\n", yylineno);
+    fclose(fp);
     fclose(yyin);
     return 0;
 }
@@ -846,7 +847,8 @@ static void insert_symbol(char* type, char* name, char* func_sig, int mark_var, 
     // addr and lineno 
     if(mark_var == Fu){// function
         new -> lineno = yylineno + 1;
-        new -> addr = -1;
+        new -> addr = addr;
+        addr ++ ;
     }
     else if(mark_var == P){// parameter
         new -> lineno = yylineno + 1;
@@ -969,6 +971,7 @@ static char *lookup_symbol(char *name, int mark_var) { // if mark_var = 0, funct
                 if(mark_var == Fu)// function
                 {
                     fprintf(fp, "invokestatic Main/%s%s\n", s -> name, s -> func_sig);
+                    /* printf("call: %s\n", s -> name); */
                     if(has_return){
                         strcat(func_para, ")");
                         printf("call: %s%s%c\n", s -> name, func_para, toupper(return_type));
