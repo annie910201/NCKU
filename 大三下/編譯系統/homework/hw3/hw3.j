@@ -8,8 +8,7 @@ ldc "another_function"
 getstatic java/lang/System/out Ljava/io/PrintStream;
 swap
 invokevirtual java/io/PrintStream/println(Ljava/lang/String;)V
-L_exit:
-return
+vreturn
 .end method
 .method public static is_divisible_by(II)B
 .limit stack 20
@@ -40,7 +39,8 @@ L_if_2:
 L_if_3: 
 ; ---------equal end---------
 L_exit:
-return
+
+breturn
 .end method
 .method public static main([Ljava/lang/String;)V
 .limit stack 100
@@ -67,6 +67,5 @@ ldc "not divisible"
 getstatic java/lang/System/out Ljava/io/PrintStream;
 swap
 invokevirtual java/io/PrintStream/println(Ljava/lang/String;)V
-L_exit:
-return
+vreturn
 .end method
