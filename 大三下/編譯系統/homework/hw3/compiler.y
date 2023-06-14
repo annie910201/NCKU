@@ -228,14 +228,18 @@ ParameterList
 FuncBlock
     : '{' NEWLINE StatementList '}' 
     { 
+        
         if(has_return){
-            printf("%creturn\n", return_type);
+            fprintf(fp, "L_exit:\n\n");
+            fprintf(fp, "%creturn\n", return_type);
             has_return = false;
-
         }
+        else if(is_main == 0)
+            fprintf(fp, "vreturn\n");
+        else 
+            fprintf(fp, "return\n");
         dump_symbol(); 
-        fprintf(fp, "L_exit:\n");
-        fprintf(fp, "return\n");
+        
         fprintf(fp, ".end method\n");
         
     }
