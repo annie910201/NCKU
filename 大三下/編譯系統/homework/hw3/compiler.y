@@ -157,7 +157,7 @@ FunctionDeclStmt
             fprintf(fp, ".limit locals 20\n");
         }
         else{
-            is_main =0;
+            // is_main =0;
         }
         // while(ptr_parameter!=0){
         //     lookup_symbol(parameter_stack[ptr_parameter-1], P);
@@ -185,7 +185,7 @@ FunctionDeclStmt
             fprintf(fp, ".limit locals 20\n");
         }
         else{
-            is_main =0;
+            // is_main =0;
         }
     }
     FuncBlock
@@ -236,8 +236,11 @@ FuncBlock
         }
         else if(is_main == 0)
             fprintf(fp, "vreturn\n");
-        else 
+        else {
             fprintf(fp, "return\n");
+            is_main = 0;
+        }
+            
         dump_symbol(); 
         
         fprintf(fp, ".end method\n");
@@ -881,8 +884,7 @@ static void insert_symbol(char* type, char* name, char* func_sig, int mark_var, 
     // addr and lineno 
     if(mark_var == Fu){// function
         new -> lineno = yylineno + 1;
-        new -> addr = addr;
-        addr ++ ;
+        new -> addr = -1;
     }
     else if(mark_var == P){// parameter
         new -> lineno = yylineno + 1;
