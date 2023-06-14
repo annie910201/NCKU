@@ -14,7 +14,7 @@ vreturn
 .limit stack 20
 .limit locals 20
 ; ------here is if start------
-iload 2
+iload 1
 ldc 0
 isub
 ; --- here is equal to ---
@@ -26,8 +26,8 @@ goto L_exit
 L_if_1: 
 
 ; ------if_end------
+iload 0
 iload 1
-iload 2
 irem
 ldc 0
 isub
@@ -67,5 +67,5 @@ ldc "not divisible"
 getstatic java/lang/System/out Ljava/io/PrintStream;
 swap
 invokevirtual java/io/PrintStream/println(Ljava/lang/String;)V
-vreturn
+return
 .end method
