@@ -79,6 +79,9 @@
     int ptr_parameter = 0;
     // char para_print[100];
     bool is_if = false;
+    bool is_array = false;
+    int ptr_array = 0;
+    int number_arr = 0;
 %}
 
 
@@ -156,21 +159,11 @@ FunctionDeclStmt
             fprintf(fp, ".limit stack 20\n");
             fprintf(fp, ".limit locals 20\n");
         }
-        else{
-            // is_main =0;
-        }
-        // while(ptr_parameter!=0){
-        //     lookup_symbol(parameter_stack[ptr_parameter-1], P);
-        //     ptr_parameter --;
-        // }
     }
     FuncBlock
     {
         has_return = false;
         return_type = 'v';
-        // fprintf(fp, "L_exit:\n");
-        // fprintf(fp, "return\n")
-        // fprintf(fp, ".end method\n")
     }
 
     | FuncOpen '(' ')'  
@@ -230,12 +223,19 @@ FuncBlock
     { 
         
         if(has_return){
-            fprintf(fp, "L_exit:\n\n");
-            fprintf(fp, "%creturn\n", return_type);
+            if (return_type == 'b'){
+                fprintf(fp, "iconst_1\n");
+                fprintf(fp, "L_exit:\n\n");
+                fprintf(fp, "ireturn\n");
+            } else {
+                fprintf(fp, "L_exit:\n\n");
+                fprintf(fp, "%creturn\n", return_type);
+            }
             has_return = false;
         }
-        else if(is_main == 0)
-            fprintf(fp, "vreturn\n");
+        else if(is_main == 0){
+            fprintf(fp, "return\n");
+        }
         else {
             fprintf(fp, "return\n");
             is_main = 0;
@@ -266,7 +266,7 @@ Statement
 CallFunction
     : ID '(' ')' ';' 
     { 
-        addr = 0;
+        // addr = 0;
         lookup_symbol($<s_val>1, Fu); // function
 
     }
@@ -279,15 +279,24 @@ Block
             printf("%creturn\n" , return_type);
         }
         if(return_type == 'b'){
+            if(strcmp($<s_val>3, "false") == 0){
+                fprintf(fp, "iconst_0\n");
+            } else {
+                fprintf(fp, "iconst_1\n");
+            }
             fprintf(fp, "goto L_exit\n");
-            // fprintf(fp, "return\n");
-            // fprintf(fp, ".end method\n");
         }
         
         dump_symbol();
         
     }
-    | StartBlock StatementList '}' { dump_symbol(); }
+    | StartBlock StatementList '}' 
+    { 
+        dump_symbol();
+        if(is_if){
+            is_if = false;
+        }
+    }
     | StartBlock BREAK Literal ';' NEWLINE '}' { dump_symbol();}
     
 ;
@@ -351,16 +360,48 @@ DeclarationStmt
         else if(strcmp($<s_val>5, "bool") == 0)
             fprintf(fp, "istore %d\n", lookup_symbol_address($<s_val>3, I));
     }
-    | LET ID ':' DeclareArrayStmt '=' ExpressionStmt { 
+    | LET ID ':' DeclareArrayStmt
+    {
+        is_array = true;
+    }
+     '=' ExpressionStmt 
+    { 
         insert_symbol("array", $<s_val>2, "-", I, false );
+        fprintf(fp, "astore_1\n");
         
     }
     | LET MUT ID '=' ExpressionStmt { 
         insert_symbol("i32", $<s_val>3, "-", I, true ); 
         fprintf(fp, "istore %d\n", lookup_symbol_address($<s_val>3, I));
     }
-    | LET ID '=' Literal { insert_symbol($<s_val>4, $<s_val>2, "-", I, false); }
+    | LET ID '=' Literal 
+    { 
+        insert_symbol($<s_val>4, $<s_val>2, "-", I, false); 
+        if(strcmp($<s_val>4, "i32") == 0)
+            fprintf(fp, "istore %d\n", lookup_symbol_address($<s_val>2, I));
+        else if(strcmp($<s_val>4, "f32") == 0)
+            fprintf(fp, "fstore %d\n", lookup_symbol_address($<s_val>2, I));
+        else if(strcmp($<s_val>4, "str") == 0)
+            fprintf(fp, "astore %d\n", lookup_symbol_address($<s_val>2, I));
+        else if(strcmp($<s_val>4, "bool") == 0)
+            fprintf(fp, "istore %d\n", lookup_symbol_address($<s_val>2, I));
+    }
     | LET ID ':' Type '=' LoopStmt { insert_symbol($<s_val>4, $<s_val>2, "-", I, false); }
+;
+DeclareArrayStmt
+    : '[' DeclareArrayStmt ']' // multi-dimension
+    | Type ';' Literal 
+    {
+        if(strcmp($<s_val>1, "i32") == 0)
+            fprintf(fp, "newarray int\n");
+    }
+    
+;
+ArrayExpr
+    : Literal ',' ArrayExpr
+    | '[' Literal ',' ArrayExpr
+    | Literal ']'
+    | '&' ID  { lookup_symbol($<s_val>2, I); } '[' DotExpr ']'
 ;
 AssignmentStmt
     : ExpressionStmt
@@ -494,6 +535,11 @@ PrintStmt
         if(strcmp($<s_val>3, "bool") == 0 || strcmp($<s_val>3, "str") == 0){
             fprintf(fp, "invokevirtual java/io/PrintStream/println(Ljava/lang/String;)V\n");
         }
+        else if(is_array){
+            
+            fprintf(fp, "invokevirtual java/io/PrintStream/println(I)V\n");
+            is_array = false;
+        }
         else{
             fprintf(fp, "invokevirtual java/io/PrintStream/println(%c)V\n", toupper($<s_val>3[0]));
         }
@@ -527,10 +573,7 @@ ForStmt
 LoopStmt
     : LOOP Block
 ;
-DeclareArrayStmt
-    : '[' DeclareArrayStmt ']' // multi-dimension
-    | Type ';' Literal 
-;
+
 ExpressionStmt
     : LogicalORExpr {$$ = $1;}
 ;
@@ -675,12 +718,7 @@ UnaryExpr
         
     }
 ;
-ArrayExpr
-    : Literal ',' ArrayExpr
-    | '[' Literal ',' ArrayExpr
-    | Literal ']'
-    | '&' ID  { lookup_symbol($<s_val>2, I); } '[' DotExpr ']'
-;
+
 DotExpr
     : DOTDOT { printf("DOTDOT\n"); } Literal 
     | DOtOpen { printf("DOTDOT\n"); }
@@ -693,11 +731,19 @@ Operand
     | Literal AS { casting = true; } Type { $$ = $<s_val>4; }// change_type
     | ID { $$ = lookup_symbol($<s_val>1, I) ;}
     | '(' ExpressionStmt ')' { $$ = $2; } // call function
-    | ID '[' INT_LIT ']' { $$ = lookup_symbol($<s_val>1, I); printf("INT_LIT %d\n", $<i_val>3);} // array
+    | ID '[' INT_LIT ']' // array
+    { 
+        fprintf(fp, "aload_1\n");
+        fprintf(fp, "iconst_%d\n", $<i_val>3);
+        fprintf(fp, "iaload\n");
+        $$ = lookup_symbol($<s_val>1, I); 
+        printf("INT_LIT %d\n", $<i_val>3);
+        is_array = true;
+    } 
     | ID AS // change_type
     {
         casting = true;
-        lookup_symbol($<s_val>1, 0);
+        lookup_symbol($<s_val>1, I);
     }
     Type 
     {
@@ -721,6 +767,12 @@ Literal
             fprintf(fp, "L_while_%d: \n", label_number++);
             is_while = false;
             fprintf(fp, "ldc %d\n", $<i_val>1-1);
+        }
+        else if(is_array){
+            fprintf(fp, "dup\n");
+            fprintf(fp, "iconst_%d\n", ptr_array++);
+            fprintf(fp, "bipush %d\n", $<i_val>1);
+            fprintf(fp, "iastore\n");
         }
         else
             fprintf(fp, "ldc %d\n", $<i_val>1);
