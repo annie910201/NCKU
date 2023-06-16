@@ -64,7 +64,6 @@
 
     /* hw3 */
     static int lookup_symbol_address(char*, int);
-    static char *lookup_symbol_type(char*, int);
     static char *lookup_symbol(char*, int);
     // static void code_generation();
     FILE *fp = NULL;
@@ -82,6 +81,7 @@
     bool is_array = false;
     int ptr_array = 0;
     int number_arr = 0;
+    bool g_has_error = false;
 %}
 
 
@@ -568,7 +568,33 @@ WhileStmt
     }
 ;
 ForStmt
-    : FOR ID IN ID { lookup_symbol($<s_val>4, I); } StartBlock { insert_symbol("i32", $<s_val>2, "-", Fo, false); }  StatementList  '}'{ dump_symbol() ;}
+    : FOR
+    {
+        fprintf(fp, "iconst_0\n");
+        fprintf(fp, "istore_1\n");
+        fprintf(fp, "aload_0\n");
+        fprintf(fp, "arraylength\n");
+        fprintf(fp, "istore_2\n");
+
+        fprintf(fp, "loop:\n");
+        fprintf(fp, "iload_1\n");
+        fprintf(fp, "iload_2\n");
+        fprintf(fp, "if_icmpge end\n");
+        fprintf(fp, "aload_0\n");
+        fprintf(fp, "iload_1\n");
+        fprintf(fp, "iaload\n");
+    }
+    ID IN ID 
+    {
+        lookup_symbol($<s_val>4, I); 
+    }
+    StartBlock { insert_symbol("i32", $<s_val>2, "-", Fo, false); }  StatementList  '}'
+    { 
+        fprintf(fp, "iinc 1 1\n");
+        fprintf(fp, "goto loop\n");
+        fprintf(fp, "end:\n");
+        dump_symbol() ;
+    }
 ;
 LoopStmt
     : LOOP Block
@@ -858,9 +884,13 @@ int main(int argc, char *argv[])
         yyin = stdin;
     }
 
-
+     if (!yyin) {
+        printf("file %s doesn't exists or cannot be opened\n", argv[1]);
+        exit(1);
+    }
     /* hw3 */
-    fp = fopen("hw3.j", "w");
+    char *bytecode_filename = "hw3.j";
+    fp = fopen(bytecode_filename, "w");
     fprintf(fp,".source hw3.j\n");
     fprintf(fp,".class public Main\n");
     fprintf(fp,".super java/lang/Object\n");
@@ -873,6 +903,10 @@ int main(int argc, char *argv[])
 	printf("Total lines: %d\n", yylineno);
     fclose(fp);
     fclose(yyin);
+     if (g_has_error) {
+        remove(bytecode_filename);
+    }
+    yylex_destroy();
     return 0;
 }
 
@@ -1009,46 +1043,6 @@ static int lookup_symbol_address(char *name, int mark_var) { // if mark_var = 0,
     return "undefined";
 }
 
-static char *lookup_symbol_type(char *name, int mark_var) { // if mark_var = 0, function; else if mark_var = 1, parameter, else(id) is 2
-    struct table *t = current_table;
-    struct symbol *s = NULL;
-    while(t!=NULL){
-        s = t -> head;
-        while(s!= NULL){
-            if(strcmp(s-> name, name) == 0){
-                if(mark_var == Fu)// function
-                {
-                    if(has_return){
-                        strcat(func_para, ")");
-                        printf("call: %s%s%c\n", s -> name, func_para, toupper(return_type));
-                        has_return = false;
-                        if(return_type == 'b')
-                            s -> func_sig = strcat(func_para, "B");
-                        return s -> func_sig  ;
-                    }
-                    else{
-                        printf("call: %s%s\n", s -> name, s -> func_sig);
-                        return s -> func_sig;
-                    }
-                }
-                    
-                else if(mark_var != Fo){// not function and foreach
-                    printf("IDENT (name=%s, address=%d)\n", s->name, s->addr);
-                    return s-> type;
-                }
-                else
-                    return s-> type;
-            }
-            else// name is not same
-                s = s->next;
-        }
-        t = t-> prev;
-    }
-    /* if it's not return until this step, it is represent the symbol is an error */
-    printf("error:%d: undefined: %s\n", yylineno+1, name);
-    return "undefined";
-}
-
 static char *lookup_symbol(char *name, int mark_var) { // if mark_var = 0, function; else if mark_var = 1, parameter, else(id) is 2
     struct table *t = current_table;
     struct symbol *s = NULL;
@@ -1099,6 +1093,7 @@ static char *lookup_symbol(char *name, int mark_var) { // if mark_var = 0, funct
     }
     /* if it's not return until this step, it is represent the symbol is an error */
     printf("error:%d: undefined: %s\n", yylineno+1, name);
+    g_has_error = true;
     return "undefined";
 }
 
