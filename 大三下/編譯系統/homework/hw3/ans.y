@@ -139,7 +139,7 @@ FunctionDeclStmt
             printf("func_signature: ()V\n");
             insert_symbol(true, false, $<s_val>2, "func", "()V");
             printf("> Insert `%s` (addr: -1) to scope level %d\n", $<s_val>2, 0);
-
+            // strcat(func_para, ")");
             if(is_main == 0){
                 CODEGEN("()V\n");
                 CODEGEN(".limit stack 20\n");

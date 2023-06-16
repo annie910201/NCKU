@@ -137,7 +137,7 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 85 "compiler.y"
+#line 96 "compiler.y"
 
     int i_val;
     float f_val;

@@ -82,6 +82,8 @@
     int ptr_array = 0;
     int number_arr = 0;
     bool g_has_error = false;
+    bool loop = false;
+    bool is_for = false;
 %}
 
 
@@ -296,6 +298,9 @@ Block
         if(is_if){
             is_if = false;
         }
+        if(loop){
+            fprintf(fp, "goto L_loop\n");
+        }
     }
     | StartBlock BREAK Literal ';' NEWLINE '}' { dump_symbol();}
     
@@ -385,7 +390,19 @@ DeclarationStmt
         else if(strcmp($<s_val>4, "bool") == 0)
             fprintf(fp, "istore %d\n", lookup_symbol_address($<s_val>2, I));
     }
-    | LET ID ':' Type '=' LoopStmt { insert_symbol($<s_val>4, $<s_val>2, "-", I, false); }
+    | LET ID ':' Type '=' LoopStmt 
+    {
+        insert_symbol($<s_val>4, $<s_val>2, "-", I, false); 
+        fprintf(fp, "L_loop_end:\n");
+        if(strcmp($<s_val>4, "i32") == 0)
+            fprintf(fp, "istore %d\n", lookup_symbol_address($<s_val>3, I));
+        else if(strcmp($<s_val>4, "f32") == 0)
+            fprintf(fp, "fstore %d\n", lookup_symbol_address($<s_val>3, I));
+        else if(strcmp($<s_val>4, "str") == 0)
+            fprintf(fp, "astore %d\n", lookup_symbol_address($<s_val>3, I));
+        else if(strcmp($<s_val>4, "bool") == 0)
+            fprintf(fp, "istore %d\n", lookup_symbol_address($<s_val>3, I));
+    }
 ;
 DeclareArrayStmt
     : '[' DeclareArrayStmt ']' // multi-dimension
@@ -408,21 +425,7 @@ AssignmentStmt
         strcpy(id_storage, id_temp);
     } 
     assign_op{
-        if(strcmp($<s_val>3, "ADD_ASSIGN") == 0){
-            fprintf(fp, "%cload %d\n", $<s_val>1[0], lookup_symbol_address(id_storage, I));
-        }
-        else if(strcmp($<s_val>3, "SUB_ASSIGN") == 0){
-            fprintf(fp, "%cload %d\n", $<s_val>1[0], lookup_symbol_address(id_storage, I));
-        }
-        else if(strcmp($<s_val>3, "MUL_ASSIGN") == 0){
-            fprintf(fp, "%cload %d\n", $<s_val>1[0], lookup_symbol_address(id_storage, I));
-        }
-        else if(strcmp($<s_val>3, "DIV_ASSIGN") == 0){
-            fprintf(fp, "%cload %d\n", $<s_val>1[0], lookup_symbol_address(id_storage, I));
-        }
-        else if(strcmp($<s_val>3, "REM_ASSIGN") == 0){
-            fprintf(fp, "%cload %d\n", $<s_val>1[0], lookup_symbol_address(id_storage, I));
-        }
+        
     } 
     ExpressionStmt 
     { 
@@ -456,6 +459,9 @@ AssignmentStmt
 IFStmt
     : IFOpen NEWLINE
     {
+        if(loop){
+            fprintf(fp, "goto L_loop_end\n");
+        }
         fprintf(fp, "L_if_%d: \n\n", label_number-1);
         fprintf(fp, "; ------if_end------\n");
     }
@@ -550,6 +556,7 @@ WhileStmt
     : WHILE 
     {
         is_while = true;
+        fprintf(fp, "L_while_%d: \n", label_number++);
     }
     ExpressionStmt
     {
@@ -570,35 +577,44 @@ ForStmt
     : FOR
     {
         fprintf(fp, "iconst_0\n");
-        fprintf(fp, "istore_1\n");
-        fprintf(fp, "aload_0\n");
-        fprintf(fp, "arraylength\n");
         fprintf(fp, "istore_2\n");
+        fprintf(fp, "aload_1\n");
+        fprintf(fp, "arraylength\n");
+        fprintf(fp, "istore_3\n");
 
         fprintf(fp, "loop:\n");
-        fprintf(fp, "iload_1\n");
         fprintf(fp, "iload_2\n");
+        fprintf(fp, "iload_3\n");
         fprintf(fp, "if_icmpge end\n");
-        fprintf(fp, "aload_0\n");
-        fprintf(fp, "iload_1\n");
+        fprintf(fp, "aload_1\n");
+        fprintf(fp, "iload_2\n");
         fprintf(fp, "iaload\n");
+        fprintf(fp, "dup\n");
+        fprintf(fp, "istore 4\n");
+        is_for = true;
     }
     ID IN ID 
     {
-        lookup_symbol($<s_val>4, I); 
+        insert_symbol("i32", $<s_val>4, "-", Fo, false);
+        lookup_symbol($<s_val>4, Fo); 
     }
-    StartBlock { insert_symbol("i32", $<s_val>2, "-", Fo, false); }  StatementList  '}'
+    StartBlock   StatementList  '}'
     { 
-        fprintf(fp, "iinc 1 1\n");
+        fprintf(fp, "iinc 2 1\n");
         fprintf(fp, "goto loop\n");
         fprintf(fp, "end:\n");
         dump_symbol() ;
+        is_for = false;
     }
 ;
 LoopStmt
-    : LOOP Block
+    : LOOP 
+    {
+        fprintf(fp, "L_loop:\n");
+        loop = true;
+    }
+    Block
 ;
-
 ExpressionStmt
     : LogicalORExpr {$$ = $1;}
 ;
@@ -660,7 +676,7 @@ ComparisonExpr
                 fprintf(fp, "; --- here is equal to ---\n");
                 fprintf(fp, "ifeq L_if_%d\n", label_number++);
                 fprintf(fp, "goto L_if_%d\n", label_number++);
-                fprintf(fp, "L_if_%d: \n", label_number-2);//true
+                fprintf(fp, "L_if_%d: \n\n", label_number-2);//true
                 if(is_if == false)
                     fprintf(fp, "\nL_if_%d: \n", label_number-1);
                 else 
@@ -789,9 +805,8 @@ Operand
 Literal
     : INT_LIT { $$ = "i32"; printf("INT_LIT %d\n", $<i_val>1); 
         if(is_while){
-            fprintf(fp, "L_while_%d: \n", label_number++);
             is_while = false;
-            fprintf(fp, "ldc %d\n", $<i_val>1-1);
+            fprintf(fp, "ldc %d\n", $<i_val>1);
         }
         else if(is_array){
             fprintf(fp, "dup\n");
@@ -877,16 +892,16 @@ Type
 /* C code section */
 int main(int argc, char *argv[])
 {
-    if (argc == 2) {
+    if (argc == 2) 
         yyin = fopen(argv[1], "r");
-    } else {
+    else 
         yyin = stdin;
-    }
 
      if (!yyin) {
         printf("file %s doesn't exists or cannot be opened\n", argv[1]);
         exit(1);
     }
+
     /* hw3 */
     char *bytecode_filename = "hw3.j";
     fp = fopen(bytecode_filename, "w");
@@ -934,8 +949,6 @@ static void insert_symbol(char* type, char* name, char* func_sig, int mark_var, 
             while(tail -> next != NULL)
                 tail = tail->next;
         }
-
-
         else // empty
             empty = true;
     }
@@ -1071,9 +1084,9 @@ static char *lookup_symbol(char *name, int mark_var) { // if mark_var = 0, funct
                     
                 }
                     
-                else if(mark_var != Fo){// parameter or id
+                else if(mark_var != Fo ){// parameter or id
                     printf("IDENT (name=%s, address=%d)\n", s->name, s->addr);
-                    if(strcmp(s->type, "i32") == 0 || strcmp(s->type, "bool") == 0)
+                    if((strcmp(s->type, "i32") == 0 || strcmp(s->type, "bool") == 0)&& is_for == false)
                         fprintf(fp, "iload %d\n", s-> addr);
                     else if(strcmp(s->type, "f32") == 0)
                         fprintf(fp, "fload %d\n", s-> addr);
