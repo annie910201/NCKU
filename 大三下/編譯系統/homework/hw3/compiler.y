@@ -115,7 +115,7 @@
 
 /* Nonterminal with return, which need to sepcify type */
 %type <s_val> add_op mul_op assign_op unary_op cmp_op shift_op Type Literal
-%type <s_val> ArrayExpr FuncOpen ExpressionStmt LogicalORExpr LogicalANDExpr ComparisonExpr AdditionExpr MultiplicationExpr UnaryExpr Operand 
+%type <s_val> FuncOpen ExpressionStmt LogicalORExpr LogicalANDExpr ComparisonExpr AdditionExpr MultiplicationExpr UnaryExpr Operand 
 
 /* Yacc will start at this nonterminal */
 %start Program 
@@ -368,7 +368,6 @@ DeclarationStmt
     { 
         insert_symbol("array", $<s_val>2, "-", I, false );
         fprintf(fp, "astore_1\n");
-        
     }
     | LET MUT ID '=' ExpressionStmt { 
         insert_symbol("i32", $<s_val>3, "-", I, true ); 
@@ -729,7 +728,7 @@ UnaryExpr
         else if(strcmp($<s_val>1, "neg") == 0)
             fprintf(fp, "%cneg\n", $<s_val>2[0]);
     }
-    | ArrayExpr {$$ = $1;}
+    | ArrayExpr
     | Operand 
     { 
         $$ = $1; 
