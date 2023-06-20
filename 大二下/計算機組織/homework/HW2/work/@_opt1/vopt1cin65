@@ -1,0 +1,56 @@
+m255
+K3
+13
+cModel Technology
+Z0 dC:\modeltech64_10.1c\examples
+T_opt
+VY<k<0iJKkiED^IY>970In2
+04 16 4 work traffic_light_tb fast 0
+=2-0897989d0e51-621e3632-6-4a60
+Z1 o-quiet -auto_acc_if_foreign -work work
+n@_opt
+Z2 OL;O;10.1c;51
+Z3 dC:\modeltech64_10.1c\examples
+T_opt1
+VRHDKM9mUzd@7S^7Wi[Q703
+04 13 4 work traffic_light fast 0
+=1-0897989d0e51-621e36a5-2f4-27d8
+R1
+n@_opt1
+R2
+vtraffic_light
+I7cdmJ48POBCckDO2X12Je2
+V`U4]1oP5j2<dTXM9i3Zd41
+Z4 dC:\modeltech64_10.1c\examples\HW2
+w1646147115
+8C:\modeltech64_10.1c\examples\HW2\traffic_light.v
+FC:\modeltech64_10.1c\examples\HW2\traffic_light.v
+L0 1
+Z5 OL;L;10.1c;51
+r1
+31
+Z6 o-work work -L mtiAvm -L mtiOvm -L mtiUvm -L mtiUPF
+!s100 WaJUc6I<d;Qm^C>l=69SK2
+!s108 1646147118.327000
+!s107 C:\modeltech64_10.1c\examples\HW2\traffic_light.v|
+!s90 -reportprogress|300|-work|work|-vopt|C:\modeltech64_10.1c\examples\HW2\traffic_light.v|
+!i10b 1
+!s85 0
+vtraffic_light_tb
+I53`InMbDCN7moeMHT@obe2
+VN4X_9^ER9K^ggc_Mhiif80
+R4
+w1643250536
+8C:/modeltech64_10.1c/examples/HW2/traffic_light_tb.v
+FC:/modeltech64_10.1c/examples/HW2/traffic_light_tb.v
+L0 7
+R5
+r1
+31
+R6
+!s100 7aXiWVaLIWe1AjJ4g]RT12
+!s90 -reportprogress|300|-work|work|-vopt|C:/modeltech64_10.1c/examples/HW2/traffic_light_tb.v|
+!i10b 1
+!s85 0
+!s108 1646147118.378000
+!s107 C:/modeltech64_10.1c/examples/HW2/traffic_light_tb.v|
