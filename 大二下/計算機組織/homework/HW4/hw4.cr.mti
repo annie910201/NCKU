@@ -1,0 +1,31 @@
+C:/modeltech64_10.1c/examples/HW4/CPU.v {1 {vlog -work work -vopt C:/modeltech64_10.1c/examples/HW4/CPU.v
+Model Technology ModelSim SE-64 vlog 10.1c Compiler 2012.07 Jul 27 2012
+-- Compiling module CPU
+
+Top level modules:
+	CPU
+
+} {} {}} C:/modeltech64_10.1c/examples/HW4/top_tb.v {1 {vlog -work work -vopt C:/modeltech64_10.1c/examples/HW4/top_tb.v
+Model Technology ModelSim SE-64 vlog 10.1c Compiler 2012.07 Jul 27 2012
+-- Compiling module top_tb
+
+Top level modules:
+	top_tb
+
+} {} {}} C:/modeltech64_10.1c/examples/HW4/top.v {1 {vlog -work work -vopt C:/modeltech64_10.1c/examples/HW4/top.v
+Model Technology ModelSim SE-64 vlog 10.1c Compiler 2012.07 Jul 27 2012
+-- Compiling module CPU
+-- Compiling module SRAM
+-- Compiling module top
+
+Top level modules:
+	top
+
+} {} {}} C:/modeltech64_10.1c/examples/HW4/SRAM.v {1 {vlog -work work -vopt C:/modeltech64_10.1c/examples/HW4/SRAM.v
+Model Technology ModelSim SE-64 vlog 10.1c Compiler 2012.07 Jul 27 2012
+-- Compiling module SRAM
+
+Top level modules:
+	SRAM
+
+} {} {}}

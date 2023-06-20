@@ -1,0 +1,66 @@
+m255
+K3
+13
+cModel Technology
+Z0 dC:\modeltech64_10.1c\examples\HW2
+vSME
+Z1 IfeZ>BbKF@>:TDAfhInzEV3
+Z2 VR0D;9T6Nzd`4cjTad<`mD3
+Z3 dC:\modeltech64_10.1c\examples\HW3
+Z4 w1648992794
+Z5 8C:/modeltech64_10.1c/examples/HW3/SME.v
+Z6 FC:/modeltech64_10.1c/examples/HW3/SME.v
+L0 1
+Z7 OL;L;10.1c;51
+r1
+31
+Z8 !s90 -reportprogress|300|-work|work|-vopt|C:/modeltech64_10.1c/examples/HW3/SME.v|
+Z9 o-work work -L mtiAvm -L mtiOvm -L mtiUvm -L mtiUPF
+Z10 n@s@m@e
+!i10b 1
+Z11 !s100 :fVbUzc34caAG6LWV[gZ13
+!s85 0
+Z12 !s108 1648992797.768000
+Z13 !s107 C:/modeltech64_10.1c/examples/HW3/SME.v|
+Xtb_sv_unit
+Z14 DXx6 sv_std 3 std 0 22 F[19LRNL:5;XmIFh[XOPn1
+!i10b 1
+Z15 !s100 B:]UCE@Z178?P3C^P7hED2
+Z16 I<]nSHmh:N=XUEn_]`bD^Q1
+Z17 V<]nSHmh:N=XUEn_]`bD^Q1
+!i103 1
+S1
+R3
+Z18 w1647944152
+Z19 8C:/modeltech64_10.1c/examples/HW3/tb.sv
+Z20 FC:/modeltech64_10.1c/examples/HW3/tb.sv
+Z21 L0 239
+R7
+r1
+!s85 0
+31
+Z22 !s108 1648992797.826000
+Z23 !s107 C:/modeltech64_10.1c/examples/HW3/tb.sv|
+Z24 !s90 -reportprogress|300|-work|work|-vopt|-sv|C:/modeltech64_10.1c/examples/HW3/tb.sv|
+Z25 o-work work -sv -L mtiAvm -L mtiOvm -L mtiUvm -L mtiUPF
+vtestfixture
+R14
+!i10b 1
+Z26 !s100 F6`XU4O86OgC4Zh=1bnKD3
+Z27 IL@ESU45a<kEF:8PgMD1>M2
+Z28 VKBIIT=eCh7cJh[^JXBGX00
+Z29 !s105 tb_sv_unit
+S1
+R3
+R18
+R19
+R20
+L0 6
+R7
+r1
+!s85 0
+31
+R22
+R23
+R24
+R25
