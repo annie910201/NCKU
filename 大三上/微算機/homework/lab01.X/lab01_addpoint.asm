@@ -1,0 +1,24 @@
+List p=18f4520
+    #include<p18f4520.inc>
+	CONFIG OSC = INTIO67
+	CONFIG WDT = OFF
+	org 0x00
+; A XOR B = A'B + AB' = (A' + B')(A + B) = (AB)' (A+B) = (A NAND B) AND (A OR B) 
+;??
+MOVLW b'00001111'
+MOVWF 0x00	;[000] = 00001111
+MOVLW b'00110011'	
+	
+IORWF 0x00,0
+MOVWF 0X01	;[001] = A OR B
+	
+MOVLW b'00110011'
+	
+ANDWF 0x00
+COMF 0X00,0	;WREG = A NAND B
+ANDWF 0X01,0	;WREG = A XOR B 
+MOVWF 0X02
+
+end
+
+

@@ -1,0 +1,27 @@
+List p=18f4520
+    #include<p18f4520.inc>
+	CONFIG OSC = INTIO67
+	CONFIG WDT = OFF
+	org 0x00 ; pc = 0x00
+MOVLB 0x1	    ;BSR = 1
+MOVLW 0x01	    ;WREG = 0x01
+MOVWF 0x00,1	    ;[100] = 0x01
+MOVWF 0x01,1	    ;[101] = 0x01
+MOVLW 0x07
+MOVWF 0X09,1	    ;[109] = 7
+LFSR 0, 0x100	    ;FSR0 = 0X100
+LFSR 1, 0x101	    ;FSR1 = 0X101
+LFSR 2, 0x102	    ;FSR2 = 0X102	
+loop:
+    CLRF WREG
+    ADDWF POSTINC0,0,0 ;WREG = SFR0		;SFR0++
+    ADDWF POSTINC1,0,0 ;WREG = SFR0 + SFR1	;SFR1++
+    MOVWF POSTINC2,0	 ;[SFR2] = WREG		;SFR2++
+    DECFSZ 0X09,1,1
+	GOTO loop
+end
+
+
+
+
+
